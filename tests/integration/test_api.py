@@ -32,8 +32,8 @@ async def db_factory():
 @pytest.fixture
 async def two_users(db_factory):
     async with db_factory() as s:
-        alice = User(email="alice@test.local", password_hash=hash_password("pw-alice"), role="admin", full_name="Alice")
-        bob = User(email="bob@test.local", password_hash=hash_password("pw-bob"), role="user", full_name="Bob")
+        alice = User(email="alice@example.com", password_hash=hash_password("pw-alice"), role="admin", full_name="Alice")
+        bob = User(email="bob@example.com", password_hash=hash_password("pw-bob"), role="user", full_name="Bob")
         s.add_all([alice, bob])
         await s.commit()
         await s.refresh(alice)
@@ -62,21 +62,21 @@ async def _login(client, email, password):
 
 async def test_login_and_me(client, two_users):
     alice, _ = two_users
-    token = await _login(client, "alice@test.local", "pw-alice")
+    token = await _login(client, "alice@example.com", "pw-alice")
     r = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
-    assert r.json()["email"] == "alice@test.local"
+    assert r.json()["email"] == "alice@example.com"
 
 
 async def test_login_bad_password(client, two_users):
-    r = await client.post("/api/v1/auth/login", json={"email": "alice@test.local", "password": "wrong"})
+    r = await client.post("/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrong"})
     assert r.status_code == 401
 
 
 async def test_project_crud_and_rbac(client, two_users, db_factory):
     alice, bob = two_users
-    alice_token = await _login(client, "alice@test.local", "pw-alice")
-    bob_token = await _login(client, "bob@test.local", "pw-bob")
+    alice_token = await _login(client, "alice@example.com", "pw-alice")
+    bob_token = await _login(client, "bob@example.com", "pw-bob")
 
     # Alice creates a project
     r = await client.post(

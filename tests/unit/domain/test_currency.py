@@ -39,12 +39,13 @@ def test_parse_invalid():
 
 
 def test_format_amount_rub():
-    assert format_amount(485050, "RUB") == "4 850.50 ₽"
+    # NBSP между разрядами и валютой — типографски корректно
+    assert format_amount(485050, "RUB") == "4 850.50 ₽"
 
 
 def test_format_amount_small():
-    assert format_amount(5, "RUB") == "0.05 ₽"
+    assert format_amount(5, "RUB") == "0.05 ₽"
 
 
 def test_format_amount_usd():
-    assert format_amount(10000, "USD") == "100.00 $"
+    assert format_amount(10000, "USD") == "100.00 $"

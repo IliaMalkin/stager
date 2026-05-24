@@ -59,6 +59,7 @@ async def test_user_project_expense_flow(session):
         raw_ocr_json={"amount": 4850.50, "vendor": "ИКЕА"},
     )
     session.add(expense)
+    await session.flush()
     receipt.expense_id = expense.id
     await session.flush()
 
