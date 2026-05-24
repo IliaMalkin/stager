@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background-color: hsl(210 20% 98%);
+  color: hsl(222 47% 11%);
+}
+
+* {
+  border-color: hsl(214 32% 91%);
+}
