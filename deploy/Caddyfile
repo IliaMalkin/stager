@@ -1,0 +1,20 @@
+# Stager reverse proxy. Caddy сам выписывает Let's Encrypt сертификат.
+
+stager.kudnever.dev {
+    encode gzip zstd
+
+    # API + docs идут на FastAPI
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+
+    # Всё остальное — Next.js
+    handle {
+        reverse_proxy web:3000
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

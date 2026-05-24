@@ -1,0 +1,69 @@
+# Production overlay. Использовать:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Главные отличия:
+# - Никаких портов наружу кроме Caddy (80/443)
+# - restart: always для всего
+# - Named volumes без host-маунтов (бэкап через pg_dump cron)
+# - APP_ENV=prod → меньше traces в Sentry, более жёсткий CORS
+
+name: stager
+
+services:
+  postgres:
+    restart: always
+    ports: !reset []
+
+  redis:
+    restart: always
+    ports: !reset []
+
+  minio:
+    restart: always
+    ports: !reset []
+
+  bot:
+    restart: always
+    environment:
+      APP_ENV: prod
+
+  api:
+    restart: always
+    environment:
+      APP_ENV: prod
+      CORS_ALLOW_ORIGINS: https://stager.kudnever.dev
+    ports: !reset []
+
+  worker:
+    restart: always
+    environment:
+      APP_ENV: prod
+
+  beat:
+    restart: always
+
+  web:
+    restart: always
+    environment:
+      APP_ENV: prod
+      NODE_ENV: production
+      INTERNAL_API_BASE: http://api:8000
+    ports: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_started }
+      web: { condition: service_started }
+
+volumes:
+  caddy_data:
+  caddy_config:
