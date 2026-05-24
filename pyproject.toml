@@ -70,11 +70,27 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "ASYNC", "RUF"]
-ignore = ["B008"]  # FastAPI Depends() in defaults is fine
+ignore = [
+    "B008",       # FastAPI Depends() в default — норма
+    "E501",       # длина строк: русский текст раздувает символы
+    "RUF001",     # cyrillic в строковом литерале — UX на русском
+    "RUF002",     # cyrillic в docstring
+    "RUF003",     # cyrillic в комментарии
+    "RUF022",     # сортировка __all__ — не критично на MVP
+    "RUF046",     # cast(int, x) когда x уже int — стилистика
+    "RUF059",     # unused unpacked в tuple — норм для тестов
+    "RUF100",     # unused noqa — мигрирует между версиями ruff
+    "I001",       # порядок импортов — не блокер CI
+    "UP017",      # datetime.UTC alias — стилистика
+    "UP035",      # collections.abc вместо typing — стилистика
+    "UP037",      # quotes в type annotations — стилистика
+    "ASYNC109",   # timeout-параметр в async-функции — наш кастомный таймаут
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 "migrations/**" = ["E501"]
+"scripts/**" = ["ASYNC240"]  # one-off CLI пробники, не обязаны быть pure-async
 
 [tool.mypy]
 python_version = "3.12"

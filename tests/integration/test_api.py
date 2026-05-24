@@ -142,7 +142,7 @@ async def test_project_crud_and_rbac(client, two_users, db_factory):
         exp = await s.get(Expense, expense_id)
         if exp:
             await s.delete(exp)
-        pm = await s.execute(
+        await s.execute(
             ProjectMember.__table__.delete().where(ProjectMember.project_id == project_id)
         )
         proj = await s.get(Project, project_id)

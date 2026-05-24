@@ -18,7 +18,7 @@ from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
-from apps.bot.drafts import Draft, ReceiptDraftStore
+from apps.bot.drafts import ReceiptDraftStore
 from apps.bot.fsm.states import PhotoReviewStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import category_picker_keyboard, review_card_keyboard

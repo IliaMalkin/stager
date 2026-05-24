@@ -28,7 +28,7 @@ async def create_project(body: ProjectCreate, db: DbSession, user: CurrentUser) 
         check_quota(user.project_quota)
     except QuotaExceeded as exc:
         from fastapi import HTTPException
-        raise HTTPException(status.HTTP_403_FORBIDDEN, f"project quota exceeded: {exc.quota}")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"project quota exceeded: {exc.quota}") from exc
     project = Project(
         owner_user_id=user.id,
         name=body.name,

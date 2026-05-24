@@ -6,11 +6,11 @@ from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
-    BigInteger, Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer,
-    String, Text, UniqueConstraint, func,
+    BigInteger, Date, DateTime, ForeignKey, Index, Integer,
+    String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from packages.db.base import Base
 

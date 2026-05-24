@@ -96,7 +96,7 @@ def process_receipt(
         return asyncio.run(_run(receipt_id, chat_id, project_id, locale))
     except _RETRYABLE as exc:
         log.warning("ocr.task_retry", receipt_id=receipt_id, error=str(exc), attempt=self.request.retries)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> dict:
