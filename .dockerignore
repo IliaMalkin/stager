@@ -1,0 +1,38 @@
+.git
+.gitignore
+.github
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# Next.js — собирается отдельным Dockerfile
+apps/web/node_modules
+apps/web/.next
+apps/web/out
+
+# Никаких локальных данных
+data
+backups
+secrets
+*.env
+!.env.example
+*.sqlite
+*.db
+*.log
+
+# Markdown — не нужен в образе
+ARCHITECTURE.md
+ROADMAP.md
+REPO_STRUCTURE.md
+PUBLIC_RELEASE_CHECKLIST.md
+
+.DS_Store
+.idea
+.vscode
