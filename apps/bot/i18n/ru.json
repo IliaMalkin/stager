@@ -1,0 +1,64 @@
+{
+  "start": {
+    "welcome_new": "Привет! Я <b>Stager</b> — собираю траты по проектам, чтобы в конце получилась готовая таблица.\n\n<b>Что умею:</b>\n📷 Фото чека → распознаю сумму, вендор, дату, категорию → запишу в активный проект\n✍️ /add &lt;сумма&gt; [категория] [описание] — записать траты руками\n📁 /newproject — новый проект (несколько одновременно — норм)\n📋 /list — список проектов с потрачено / бюджет, переключение активного\n📊 /report — сводка + кнопка скачать Excel-таблицу\n🔗 /invite — пригласить кого-то в активный проект\n\n<b>Начни здесь:</b> /newproject",
+    "welcome_back": "С возвращением!\n\n📷 фото чека → авто-запись · /add — руками · /list — проекты · /report — итог + Excel",
+    "invite_redeemed": "✅ Добро пожаловать в Stager!\n\n/list — твои проекты\n/help — справка",
+    "invite_not_found": "⚠️ Инвайт не найден.",
+    "invite_used": "⚠️ Этот инвайт уже использован.",
+    "invite_expired": "⚠️ Срок действия инвайта истёк.",
+    "auth_rejected": "Бот закрытый. Нужен инвайт — попроси у владельца."
+  },
+  "help": {
+    "text": "<b>Stager</b> — учёт расходов по проектам.\n\n<b>Проекты</b>\n/newproject — создать\n/list — список и переключение\n/switch — выбрать активный\n\n<b>Траты</b>\n📷 Просто пришли фото чека\n/add &lt;сумма&gt; [категория] [описание] — текстом\n\n<b>Отчёт</b>\n/report — сводка + Excel\n\n<b>Прочее</b>\n/invite — выдать инвайт (для владельца)\n/cancel — выйти из диалога"
+  },
+  "newproject": {
+    "ask_name": "Как назовём проект?",
+    "ask_budget": "Бюджет (число) или /skip:",
+    "bad_budget": "Не понял бюджет. Введи число или /skip.",
+    "confirm": "Создаю: <b>{name}</b>{budget_line}\nВалюта: RUB\n\nПодтверди кнопкой ниже или /cancel",
+    "budget_line_with": "\nБюджет: {amount}",
+    "budget_line_none": "",
+    "created": "✅ Создан проект: <b>{name}</b>\nОн активен."
+  },
+  "projects": {
+    "none": "У тебя пока нет проектов. /newproject",
+    "list_header": "Твои проекты:",
+    "active_marker": "🟢",
+    "inactive_marker": "⚪",
+    "switched": "Активный проект → <b>{name}</b>",
+    "not_yours": "Этот проект не твой.",
+    "no_active": "Сейчас нет активного проекта. /list → выбери."
+  },
+  "expenses": {
+    "added": "✅ {amount} · {category}{desc}",
+    "added_desc_line": "\n{desc}",
+    "parse_error": "{error}\n\nПример: /add 4850 мебель диван из ИКЕА"
+  },
+  "photo": {
+    "ack": "📷 Принял. Обрабатываю чек…",
+    "no_active_project": "Нет активного проекта. /newproject или /list.",
+    "ocr_failed": "Не смог прочитать чек 😕\nПопробуй сфоткать ещё раз или добавь вручную: /add",
+    "card": "🧾 <b>{vendor}</b>\n💰 {amount}\n📅 {date}\n🏷  {category}{warn}",
+    "card_warn_low_confidence": "\n\n⚠️ Уверенность низкая — проверь поля.",
+    "saved": "✅ Сохранено в проект <b>{project}</b>.",
+    "cancelled": "Отменено."
+  },
+  "report": {
+    "empty": "В активном проекте ещё нет расходов.",
+    "summary": "<b>{project}</b>\nИтого: {total} ({count} {count_word})\n\n<b>По категориям:</b>\n{by_category}",
+    "category_line": "  {label} — {amount}",
+    "preparing_xlsx": "Готовлю файл…",
+    "count_singular": "трата",
+    "count_few": "траты",
+    "count_many": "трат"
+  },
+  "invite": {
+    "not_owner": "Только владелец проекта может выдавать инвайты.",
+    "created": "🔗 Инвайт готов (действует {hours}ч):\n\n{url}",
+    "no_active": "Нет активного проекта. /list."
+  },
+  "common": {
+    "cancelled": "Отменено.",
+    "unknown_command": "Не понял. /help"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "start": {
+    "welcome_new": "Hi! I'm <b>Stager</b> — I track expenses per project and produce a ready-to-share spreadsheet at the end.\n\n<b>What I can do:</b>\n📷 Send a receipt photo → I recognize amount, vendor, date, category → write to the active project\n✍️ /add &lt;amount&gt; [category] [description] — manual entry\n📁 /newproject — create a project (several in parallel — fine)\n📋 /list — projects with spent / budget, switch active\n📊 /report — summary + Excel download\n🔗 /invite — invite someone to the active project\n\n<b>Start here:</b> /newproject",
+    "welcome_back": "Welcome back!\n\n📷 photo → auto-record · /add — manual · /list — projects · /report — Excel",
+    "invite_redeemed": "✅ Welcome to Stager!\n\n/list — your projects\n/help — commands",
+    "invite_not_found": "⚠️ Invite not found.",
+    "invite_used": "⚠️ This invite has already been used.",
+    "invite_expired": "⚠️ Invite expired.",
+    "auth_rejected": "Bot is private. Ask the owner for an invite."
+  },
+  "help": {
+    "text": "<b>Stager</b> — project expense tracker.\n\n<b>Projects</b>\n/newproject — create\n/list — list & switch\n/switch — pick active\n\n<b>Expenses</b>\n📷 Just send a receipt photo\n/add &lt;amount&gt; [category] [description]\n\n<b>Report</b>\n/report — summary + Excel\n\n<b>Misc</b>\n/invite — issue invite (owner)\n/cancel — exit dialog"
+  },
+  "newproject": {
+    "ask_name": "Project name?",
+    "ask_budget": "Budget (number) or /skip:",
+    "bad_budget": "Couldn't parse budget. Enter a number or /skip.",
+    "confirm": "Creating: <b>{name}</b>{budget_line}\nCurrency: RUB\n\nConfirm with the button or /cancel",
+    "budget_line_with": "\nBudget: {amount}",
+    "budget_line_none": "",
+    "created": "✅ Created project: <b>{name}</b>\nIt's now active."
+  },
+  "projects": {
+    "none": "No projects yet. /newproject",
+    "list_header": "Your projects:",
+    "active_marker": "🟢",
+    "inactive_marker": "⚪",
+    "switched": "Active project → <b>{name}</b>",
+    "not_yours": "That project isn't yours.",
+    "no_active": "No active project. /list to pick one."
+  },
+  "expenses": {
+    "added": "✅ {amount} · {category}{desc}",
+    "added_desc_line": "\n{desc}",
+    "parse_error": "{error}\n\nExample: /add 4850 furniture sofa from IKEA"
+  },
+  "photo": {
+    "ack": "📷 Got it. Processing receipt…",
+    "no_active_project": "No active project. /newproject or /list.",
+    "ocr_failed": "Couldn't read the receipt 😕\nTry another photo or add manually: /add",
+    "card": "🧾 <b>{vendor}</b>\n💰 {amount}\n📅 {date}\n🏷  {category}{warn}",
+    "card_warn_low_confidence": "\n\n⚠️ Low confidence — double-check fields.",
+    "saved": "✅ Saved into project <b>{project}</b>.",
+    "cancelled": "Cancelled."
+  },
+  "report": {
+    "empty": "No expenses in the active project yet.",
+    "summary": "<b>{project}</b>\nTotal: {total} ({count} {count_word})\n\n<b>By category:</b>\n{by_category}",
+    "category_line": "  {label} — {amount}",
+    "preparing_xlsx": "Preparing file…",
+    "count_singular": "expense",
+    "count_few": "expenses",
+    "count_many": "expenses"
+  },
+  "invite": {
+    "not_owner": "Only the project owner can issue invites.",
+    "created": "🔗 Invite ready (valid {hours}h):\n\n{url}",
+    "no_active": "No active project. /list."
+  },
+  "common": {
+    "cancelled": "Cancelled.",
+    "unknown_command": "Didn't get it. /help"
+  }
+}
