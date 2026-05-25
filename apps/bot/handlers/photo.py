@@ -1,9 +1,8 @@
 """Photo handler — main flow.
 
 1. Принимаем фото, ack сразу
-2. Скачиваем bytes → MinIO put → создаём Receipt(pending)
-3. Enqueue Celery `ocr.process_receipt`
-4. Worker дописывает Receipt.raw_ocr_text (audit) + кладёт draft в Redis +
+2. Enqueue Celery `ocr.process_receipt` with Telegram file_id
+3. Worker скачивает фото, кладёт в MinIO, создаёт Receipt и дописывает audit/draft +
    отправляет review-card обратно
 
 Inline-кнопки карточки обрабатываются здесь, draft живёт в Redis 24ч.
@@ -22,7 +21,6 @@ from apps.bot.drafts import ReceiptDraftStore
 from apps.bot.fsm.states import PhotoReviewStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import category_picker_keyboard, review_card_keyboard
-from apps.worker.celery_app import celery_app
 from packages.db.models import ActiveContext, Expense, Project, Receipt, User
 from packages.domain.categories import label_for, parse_category
 from packages.domain.currency import format_amount, parse_amount_to_minor
@@ -38,7 +36,7 @@ async def on_photo(
     bot: Bot,
     state: FSMContext,
     session_factory: Any,
-    storage: Any,
+    producer: Any,
     locale: str = "ru",
 ) -> None:
     tg = message.from_user
@@ -58,29 +56,12 @@ async def on_photo(
     await message.answer(t("photo.ack", locale))
 
     photo = message.photo[-1]
-    file = await bot.get_file(photo.file_id)
-    if not file.file_path:
-        return
-    buf = await bot.download_file(file.file_path)
-    if buf is None:
-        return
-    data = buf.read()
-
-    minio_key = await storage.put_receipt(project_id, data, filename=f"{photo.file_unique_id}.jpg")
-
-    async with session_factory() as session:
-        receipt = Receipt(
-            minio_key=minio_key,
-            original_filename=f"{photo.file_unique_id}.jpg",
-            ocr_status="pending",
-        )
-        session.add(receipt)
-        await session.commit()
-        receipt_id = receipt.id
-
-    celery_app.send_task(
-        "ocr.process_receipt",
-        args=[receipt_id, tg.id, message.chat.id, project_id, locale],
+    producer.enqueue_ocr(
+        file_id=photo.file_id,
+        chat_id=message.chat.id,
+        project_id=project_id,
+        user_tg_id=tg.id,
+        locale=locale,
     )
 
 

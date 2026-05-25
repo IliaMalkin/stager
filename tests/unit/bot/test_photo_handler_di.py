@@ -51,3 +51,39 @@ async def test_cb_save_uses_injected_resources(monkeypatch, fake_session_factory
     assert receipt.expense_id == session.added[0].id
     assert fake_drafts.cleared == [30]
     query.message.answer.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_on_photo_only_enqueues_ocr(monkeypatch, fake_session_factory, fake_storage, fake_producer):
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/15")
+    from apps.bot.handlers.photo import on_photo
+
+    session_factory, session = fake_session_factory
+    user = User(id=10, telegram_id=123, full_name="Tester", role="user")
+    session.scalars[User] = user
+    session.by_model[ActiveContext][10] = ActiveContext(user_id=10, current_project_id=20)
+
+    message = MagicMock(spec=types.Message)
+    message.from_user = MagicMock(id=123)
+    message.chat = MagicMock(id=456)
+    message.photo = [MagicMock(file_id="small"), MagicMock(file_id="large-file-id")]
+    message.answer = AsyncMock()
+    bot = MagicMock()
+    bot.get_file = AsyncMock()
+    bot.download_file = AsyncMock()
+    state = MagicMock()
+
+    await on_photo(
+        message,
+        bot,
+        state,
+        session_factory=session_factory,
+        producer=fake_producer,
+        locale="ru",
+    )
+
+    assert fake_producer.ocr_calls == [("large-file-id", 456, 20, 123, "ru")]
+    assert fake_storage.puts == []
+    assert session.added == []
+    bot.get_file.assert_not_called()
+    bot.download_file.assert_not_called()

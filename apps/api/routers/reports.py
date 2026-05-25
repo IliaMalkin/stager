@@ -6,9 +6,9 @@ from sqlalchemy import select
 
 from apps.api.deps import CurrentUser, DbSession, require_project_member
 from apps.api.schemas import CategoryRowOut, DayRowOut, ProjectSummaryOut
-from apps.worker.tasks.reports import build_csv_bytes, build_xlsx_bytes
 from packages.db.models import Expense, Project
 from packages.domain.reports import summarize_expenses
+from packages.reports import build_csv_bytes, build_xlsx_bytes
 
 router = APIRouter(prefix="/projects/{project_id}/report", tags=["reports"])
 

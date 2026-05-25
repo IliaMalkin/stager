@@ -67,6 +67,21 @@ class FakeStorage:
         return f"receipts/{project_id}/{filename}"
 
 
+class FakeTaskProducer:
+    def __init__(self) -> None:
+        self.ocr_calls: list[tuple[str, int, int, int, str]] = []
+
+    def enqueue_ocr(
+        self,
+        file_id: str,
+        chat_id: int,
+        project_id: int,
+        user_tg_id: int,
+        locale: str,
+    ) -> None:
+        self.ocr_calls.append((file_id, chat_id, project_id, user_tg_id, locale))
+
+
 class FakeSession:
     def __init__(self) -> None:
         self.by_model: defaultdict[type, dict[Any, Any]] = defaultdict(dict)
@@ -123,3 +138,8 @@ def fake_drafts() -> FakeDraftStore:
 @pytest.fixture
 def fake_storage() -> FakeStorage:
     return FakeStorage()
+
+
+@pytest.fixture
+def fake_producer() -> FakeTaskProducer:
+    return FakeTaskProducer()

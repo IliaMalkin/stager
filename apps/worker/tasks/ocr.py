@@ -1,12 +1,4 @@
-"""OCR pipeline: receipt photo → LLM vision → review card в Telegram.
-
-Архитектурные решения:
-- Module-level lazy cache для Bot/LLM router — переиспользуем через worker process
-- Узкое ретраение: только сетевые/I-O ошибки, программные баги пробрасываем как есть
-- Бот сам отправляет review card обратно в чат — chat_id приходит из enqueue-args
-- Receipt.raw_ocr_text хранит ИСХОДНЫЙ ответ LLM (audit), а draft для редактирования
-  живёт в Redis (apps.bot.drafts)
-"""
+"""OCR pipeline: Telegram file_id -> MinIO -> LLM vision -> review card."""
 
 from __future__ import annotations
 
@@ -33,24 +25,8 @@ from packages.storage import build_storage
 
 log = structlog.get_logger(__name__)
 
-
-# ─── module-level cached singletons ──────────────────────────────────────────
-# Каждый Celery-worker процесс держит один Bot и один LLM router. Между tasks
-# переиспользуются. asyncio event loop создаётся новый на каждый asyncio.run().
-
-_bot: Bot | None = None
 _router: Any = None
 _storage: Any = None
-
-
-def _get_bot() -> Bot:
-    global _bot
-    if _bot is None:
-        _bot = Bot(
-            token=os.environ["TELEGRAM_BOT_TOKEN"],
-            default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-        )
-    return _bot
 
 
 def _get_router() -> Any:
@@ -67,10 +43,6 @@ def _get_storage() -> Any:
     return _storage
 
 
-# ─── retryable exceptions ────────────────────────────────────────────────────
-# Расширяем по мере обнаружения реальных flake-ов на проде. Программные ошибки
-# (KeyError, AttributeError) сюда НЕ попадают и убивают task сразу — это правильно.
-
 _RETRYABLE = (
     httpx.HTTPError,
     httpx.TimeoutException,
@@ -81,41 +53,55 @@ _RETRYABLE = (
 )
 
 
-# ─── task ────────────────────────────────────────────────────────────────────
-
 @celery_app.task(name="ocr.process_receipt", bind=True, max_retries=3, default_retry_delay=10)
 def process_receipt(
     self,
-    receipt_id: int,
+    file_id: str,
     tg_user_id: int,
     chat_id: int,
     project_id: int,
     locale: str = "ru",
 ) -> dict:
     try:
-        return asyncio.run(_run(receipt_id, chat_id, project_id, locale))
+        return asyncio.run(_run_task(file_id, chat_id, project_id, locale))
     except _RETRYABLE as exc:
-        log.warning("ocr.task_retry", receipt_id=receipt_id, error=str(exc), attempt=self.request.retries)
+        log.warning("ocr.task_retry", file_id=file_id, error=str(exc), attempt=self.request.retries)
         raise self.retry(exc=exc) from exc
 
 
-async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> dict:
-    # 1. Receipt status check (идемпотентность)
-    async with get_sessionmaker()() as session:
-        receipt = await session.get(Receipt, receipt_id)
-        if not receipt:
-            log.warning("ocr.receipt_missing", receipt_id=receipt_id)
-            return {"status": "missing"}
-        if receipt.ocr_status in ("ok", "needs_review") and receipt.raw_ocr_text:
-            log.info("ocr.already_processed", receipt_id=receipt_id)
-            return {"status": "already_processed"}
-        minio_key = receipt.minio_key
-        receipt.ocr_attempts += 1
-        await session.commit()
+async def _run_task(file_id: str, chat_id: int, project_id: int, locale: str) -> dict:
+    bot = Bot(
+        token=os.environ["TELEGRAM_BOT_TOKEN"],
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    try:
+        return await _run(file_id, chat_id, project_id, locale, bot)
+    finally:
+        await bot.session.close()
 
-    # 2. Скачиваем картинку + дёргаем LLM
+
+async def _run(file_id: str, chat_id: int, project_id: int, locale: str, bot: Bot) -> dict:
+    file = await bot.get_file(file_id)
+    if not file.file_path:
+        raise OSError(f"telegram file has no path: {file_id}")
+    buf = await bot.download_file(file.file_path)
+    if buf is None:
+        raise OSError(f"telegram file download returned empty: {file_id}")
+    image_bytes = buf.read()
+
     storage = _get_storage()
-    image_bytes = await storage.get_object(minio_key)
+    minio_key = await storage.put_receipt(project_id, image_bytes, filename=f"{file_id}.jpg")
+
+    async with get_sessionmaker()() as session:
+        receipt = Receipt(
+            minio_key=minio_key,
+            original_filename=f"{file_id}.jpg",
+            ocr_status="pending",
+            ocr_attempts=1,
+        )
+        session.add(receipt)
+        await session.commit()
+        receipt_id = receipt.id
 
     router = _get_router()
     try:
@@ -126,17 +112,15 @@ async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> d
             request_id=f"receipt:{receipt_id}",
         )
     except (MimoError, GeminiError) as exc:
-        # Оба провайдера упали — записываем failed и шлём извинение
         log.exception("ocr.both_providers_failed", receipt_id=receipt_id)
         async with get_sessionmaker()() as session:
             r = await session.get(Receipt, receipt_id)
             if r:
                 r.ocr_status = "failed"
                 await session.commit()
-        await _send_failed(chat_id, locale)
+        await _send_failed(bot, chat_id, locale)
         return {"status": "failed", "error": str(exc)}
 
-    # 3. Записываем audit + draft
     status = "ok" if result.is_reliable() else "needs_review"
     async with get_sessionmaker()() as session:
         r = await session.get(Receipt, receipt_id)
@@ -144,13 +128,11 @@ async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> d
             return {"status": "missing"}
         r.ocr_status = status
         r.ocr_provider = f"{meta.provider}:{meta.model}"
-        # raw_ocr_text — ИММУТАБЕЛЬНЫЙ audit, никогда не перезаписывается callback'ами
         r.raw_ocr_text = json.dumps(
             _result_to_draft_dict(result), ensure_ascii=False, default=str
         )
         await session.commit()
 
-    # Кладём draft в Redis (отдельно от raw_ocr_text)
     from apps.bot.drafts import Draft, ReceiptDraftStore
     drafts = ReceiptDraftStore.from_env()
     try:
@@ -158,8 +140,7 @@ async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> d
     finally:
         await drafts.redis.aclose()
 
-    # 4. Отправляем review card
-    await _send_card(chat_id, receipt_id, project_id, result, locale)
+    await _send_card(bot, chat_id, receipt_id, project_id, result, locale)
     return {
         "status": status,
         "provider": meta.provider,
@@ -181,6 +162,7 @@ def _result_to_draft_dict(r: OCRResult) -> dict:
 
 
 async def _send_card(
+    bot: Bot,
     chat_id: int,
     receipt_id: int,
     project_id: int,
@@ -209,14 +191,12 @@ async def _send_card(
         category=label_for(result.category_guess, locale),
         warn="" if can_save else t("photo.card_warn_low_confidence", locale),
     )
-    bot = _get_bot()
     await bot.send_message(
         chat_id, text,
         reply_markup=review_card_keyboard(receipt_id, can_save=can_save, locale=locale),
     )
 
 
-async def _send_failed(chat_id: int, locale: str) -> None:
+async def _send_failed(bot: Bot, chat_id: int, locale: str) -> None:
     from apps.bot.i18n import t
-    bot = _get_bot()
     await bot.send_message(chat_id, t("photo.ocr_failed", locale))

@@ -15,6 +15,7 @@ from packages.db.models import ActiveContext, Expense, Project, ProjectMember, U
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
 from packages.domain.reports import summarize_expenses
+from packages.reports import build_xlsx_bytes
 
 router = Router(name="report")
 
@@ -119,8 +120,6 @@ async def cb_export_xlsx(
 
     # Генерим XLSX inline (не через Celery — отчёт маленький, 2-3 сек ОК).
     # Для больших — Celery `reports.export_xlsx` в apps/worker/tasks/reports.py.
-    from apps.worker.tasks.reports import build_xlsx_bytes
-
     data = build_xlsx_bytes(project, expenses, locale=locale)
     if isinstance(query.message, types.Message):
         safe_name = "".join(c if c.isalnum() or c in "-_." else "_" for c in project.name)

@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Awaitable, Callable
 
 import structlog
@@ -22,7 +23,7 @@ from apps.bot.drafts import ReceiptDraftStore
 from packages.db.base import get_sessionmaker
 from packages.db.models import User
 from packages.observability import bind_request_id, clear_request_id
-from packages.storage import build_storage
+from packages.queue import TaskProducer
 
 log = structlog.get_logger(__name__)
 
@@ -50,7 +51,7 @@ class ResourcesMiddleware(BaseMiddleware):
     def __init__(self) -> None:
         self._session_factory: Any | None = None
         self._drafts: ReceiptDraftStore | None = None
-        self._storage: Any | None = None
+        self._producer: TaskProducer | None = None
 
     async def __call__(
         self,
@@ -62,20 +63,17 @@ class ResourcesMiddleware(BaseMiddleware):
             self._session_factory = get_sessionmaker()
         if self._drafts is None:
             self._drafts = ReceiptDraftStore.from_env()
-        if self._storage is None:
-            self._storage = build_storage()
+        if self._producer is None:
+            self._producer = TaskProducer(os.environ["REDIS_URL"])
 
         data["session_factory"] = self._session_factory
         data["drafts"] = self._drafts
-        data["storage"] = self._storage
+        data["producer"] = self._producer
         return await handler(event, data)
 
     async def close(self) -> None:
         if self._drafts is not None:
             await self._drafts.redis.aclose()
-        close = getattr(self._storage, "aclose", None)
-        if close is not None:
-            await close()
 
 
 class AuthMiddleware(BaseMiddleware):
