@@ -9,7 +9,7 @@ from aiogram.filters import Command, CommandObject
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, User
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
@@ -29,7 +29,7 @@ async def cmd_add(message: types.Message, command: CommandObject, locale: str = 
         await message.answer(t("expenses.parse_error", locale, error=str(exc)))
         return
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return

@@ -18,7 +18,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy import select
 
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import User
 from packages.observability import bind_request_id, clear_request_id
 
@@ -79,7 +79,7 @@ class AuthMiddleware(BaseMiddleware):
         if text.startswith("/start"):
             return await handler(event, data)
 
-        async with async_session_factory() as session:
+        async with get_sessionmaker()() as session:
             user = await session.scalar(select(User).where(User.telegram_id == tg_user_id))
         if user:
             data["current_user"] = user

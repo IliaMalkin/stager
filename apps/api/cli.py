@@ -8,12 +8,12 @@ import sys
 from sqlalchemy import select
 
 from apps.api.security import hash_password
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import User
 
 
 async def _create_admin(email: str, password: str, full_name: str | None = None) -> None:
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         existing = await session.scalar(select(User).where(User.email == email))
         if existing:
             existing.password_hash = hash_password(password)

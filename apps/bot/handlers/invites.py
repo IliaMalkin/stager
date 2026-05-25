@@ -17,7 +17,7 @@ from aiogram.filters import Command, CommandObject
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Invite, ProjectMember, User
 
 router = Router(name="invites")
@@ -58,7 +58,7 @@ async def cmd_invite(
 
     quota_only, max_projects = _parse_args(command.args or "")
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return

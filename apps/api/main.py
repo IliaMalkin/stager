@@ -16,7 +16,7 @@ from starlette.responses import JSONResponse, Response
 
 from apps.api.rate_limit import limiter
 from apps.api.routers import auth, expenses, invites, projects, reports
-from packages.db.base import async_engine
+from packages.db.base import dispose_engine, get_engine
 from packages.observability import (
     bind_request_id, clear_request_id, configure_logging, init_sentry,
 )
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
     init_sentry(service="api")
     log.info("api.starting")
     yield
-    await async_engine.dispose()
+    await dispose_engine()
     log.info("api.stopped")
 
 
@@ -93,7 +93,7 @@ async def health() -> dict[str, str]:
     db_ok = False
     redis_ok = False
     try:
-        async with async_engine.connect() as conn:
+        async with get_engine().connect() as conn:
             await conn.execute(text("SELECT 1"))
         db_ok = True
     except Exception:  # noqa: BLE001

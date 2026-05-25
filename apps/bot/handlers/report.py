@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from apps.bot.i18n import t
 from apps.bot.keyboards import report_download_keyboard
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, ProjectMember, User
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
@@ -36,7 +36,7 @@ async def cmd_report(message: types.Message, locale: str = "ru") -> None:
     tg = message.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -85,7 +85,7 @@ async def cb_export_xlsx(query: types.CallbackQuery, bot: Bot, locale: str = "ru
     except (IndexError, ValueError):
         return
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == query.from_user.id))
         if not user:
             await query.answer("⚠️", show_alert=True)

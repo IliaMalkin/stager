@@ -68,13 +68,11 @@ async def test_login_and_me(client, two_users):
     assert r.json()["email"] == "alice@example.com"
 
 
-@pytest.mark.skip(reason="event-loop pollution через api module-level engine + Starlette middleware; чинить с DI")
 async def test_login_bad_password(client, two_users):
     r = await client.post("/api/v1/auth/login", json={"email": "alice@example.com", "password": "wrong"})
     assert r.status_code == 401
 
 
-@pytest.mark.skip(reason="event-loop pollution через api module-level engine; чинить с DI")
 async def test_project_crud_and_rbac(client, two_users, db_factory):
     alice, bob = two_users
     alice_token = await _login(client, "alice@example.com", "pw-alice")

@@ -30,7 +30,6 @@ async def session():
     await engine.dispose()
 
 
-@pytest.mark.skip(reason="event-loop pollution: engine fixture finalizer attached to first loop; fix с DI")
 async def test_user_project_expense_flow(session):
     user = User(telegram_id=999_001, full_name="Test", role="user")
     session.add(user)

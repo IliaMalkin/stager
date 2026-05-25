@@ -22,7 +22,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from apps.worker.celery_app import celery_app
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import Project, Receipt
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
@@ -101,7 +101,7 @@ def process_receipt(
 
 async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> dict:
     # 1. Receipt status check (идемпотентность)
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         receipt = await session.get(Receipt, receipt_id)
         if not receipt:
             log.warning("ocr.receipt_missing", receipt_id=receipt_id)
@@ -128,7 +128,7 @@ async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> d
     except (MimoError, GeminiError) as exc:
         # Оба провайдера упали — записываем failed и шлём извинение
         log.exception("ocr.both_providers_failed", receipt_id=receipt_id)
-        async with async_session_factory() as session:
+        async with get_sessionmaker()() as session:
             r = await session.get(Receipt, receipt_id)
             if r:
                 r.ocr_status = "failed"
@@ -138,7 +138,7 @@ async def _run(receipt_id: int, chat_id: int, project_id: int, locale: str) -> d
 
     # 3. Записываем audit + draft
     status = "ok" if result.is_reliable() else "needs_review"
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         r = await session.get(Receipt, receipt_id)
         if not r:
             return {"status": "missing"}
@@ -190,7 +190,7 @@ async def _send_card(
     from apps.bot.i18n import t
     from apps.bot.keyboards import review_card_keyboard
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         project = await session.get(Project, project_id)
         currency = project.currency if project else "RUB"
 

@@ -11,7 +11,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import Invite, ProjectMember, User
 
 
@@ -51,7 +51,7 @@ async def _greet(message: types.Message) -> None:
     tg = message.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if user:
             await message.answer(t("start.welcome_back", user.locale or "ru"))
@@ -78,7 +78,7 @@ async def _redeem_invite(message: types.Message, token: str) -> None:
     tg = message.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         invite = await session.scalar(select(Invite).where(Invite.token == token))
         if not invite:
             await message.answer(t("start.invite_not_found", "ru"))

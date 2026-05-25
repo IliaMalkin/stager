@@ -23,7 +23,7 @@ from apps.bot.fsm.states import PhotoReviewStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import category_picker_keyboard, review_card_keyboard
 from apps.worker.celery_app import celery_app
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, Receipt, User
 from packages.domain.categories import label_for, parse_category
 from packages.domain.currency import format_amount, parse_amount_to_minor
@@ -40,7 +40,7 @@ async def on_photo(message: types.Message, bot: Bot, state: FSMContext, locale: 
     if not tg or not message.photo:
         return
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -64,7 +64,7 @@ async def on_photo(message: types.Message, bot: Bot, state: FSMContext, locale: 
     storage = build_storage()
     minio_key = await storage.put_receipt(project_id, data, filename=f"{photo.file_unique_id}.jpg")
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         receipt = Receipt(
             minio_key=minio_key,
             original_filename=f"{photo.file_unique_id}.jpg",
@@ -98,7 +98,7 @@ async def cb_save(query: types.CallbackQuery, locale: str = "ru") -> None:
         await query.answer("Сумма не определена. Поправь вручную.", show_alert=True)
         return
 
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         receipt = await session.get(Receipt, receipt_id)
         if not receipt or receipt.ocr_status not in ("ok", "needs_review"):
             await query.answer("⚠️", show_alert=True)

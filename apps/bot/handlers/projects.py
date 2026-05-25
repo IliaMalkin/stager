@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from apps.bot.fsm.states import NewProjectStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import new_project_confirm_keyboard, project_switch_keyboard
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, ProjectMember, User
 from packages.domain.currency import format_amount, parse_amount_to_minor
 from packages.domain.quota import QuotaExceeded, check_quota, decrement_quota
@@ -86,7 +86,7 @@ async def np_confirm_inline(query: types.CallbackQuery, state: FSMContext, local
     tg = query.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             await state.clear()
@@ -132,7 +132,7 @@ async def np_confirm_text(message: types.Message, state: FSMContext, locale: str
     tg = message.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             await state.clear()
@@ -173,7 +173,7 @@ async def cmd_list(message: types.Message, locale: str = "ru") -> None:
     tg = message.from_user
     if not tg:
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -224,7 +224,7 @@ async def cb_switch(query: types.CallbackQuery, locale: str = "ru") -> None:
         project_id = int(query.data.split(":")[2])
     except (IndexError, ValueError):
         return
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         user = await session.scalar(select(User).where(User.telegram_id == query.from_user.id))
         if not user:
             return

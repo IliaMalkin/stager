@@ -8,12 +8,12 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import decode_token
-from packages.db.base import async_session_factory
+from packages.db.base import get_sessionmaker
 from packages.db.models import ProjectMember, User
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    async with async_session_factory() as session:
+    async with get_sessionmaker()() as session:
         yield session
 
 
