@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from aiogram import Bot, F, Router, types
 from aiogram.filters import Command
 from aiogram.types import BufferedInputFile
@@ -9,7 +11,6 @@ from sqlalchemy import select
 
 from apps.bot.i18n import t
 from apps.bot.keyboards import report_download_keyboard
-from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, ProjectMember, User
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
@@ -32,11 +33,11 @@ def _ru_count(n: int) -> str:
 
 
 @router.message(Command("report"))
-async def cmd_report(message: types.Message, locale: str = "ru") -> None:
+async def cmd_report(message: types.Message, session_factory: Any, locale: str = "ru") -> None:
     tg = message.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -77,7 +78,12 @@ async def cmd_report(message: types.Message, locale: str = "ru") -> None:
 
 
 @router.callback_query(F.data.startswith("rep:xlsx:"))
-async def cb_export_xlsx(query: types.CallbackQuery, bot: Bot, locale: str = "ru") -> None:
+async def cb_export_xlsx(
+    query: types.CallbackQuery,
+    bot: Bot,
+    session_factory: Any,
+    locale: str = "ru",
+) -> None:
     if not query.data or not query.from_user:
         return
     try:
@@ -85,7 +91,7 @@ async def cb_export_xlsx(query: types.CallbackQuery, bot: Bot, locale: str = "ru
     except (IndexError, ValueError):
         return
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == query.from_user.id))
         if not user:
             await query.answer("⚠️", show_alert=True)
@@ -116,7 +122,7 @@ async def cb_export_xlsx(query: types.CallbackQuery, bot: Bot, locale: str = "ru
     from apps.worker.tasks.reports import build_xlsx_bytes
 
     data = build_xlsx_bytes(project, expenses, locale=locale)
-    if query.message:
+    if isinstance(query.message, types.Message):
         safe_name = "".join(c if c.isalnum() or c in "-_." else "_" for c in project.name)
         await query.message.answer_document(
             BufferedInputFile(data, filename=f"{safe_name}_report.xlsx")

@@ -23,11 +23,9 @@ from apps.bot.fsm.states import PhotoReviewStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import category_picker_keyboard, review_card_keyboard
 from apps.worker.celery_app import celery_app
-from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, Receipt, User
 from packages.domain.categories import label_for, parse_category
 from packages.domain.currency import format_amount, parse_amount_to_minor
-from packages.storage import build_storage
 
 router = Router(name="photo")
 
@@ -35,12 +33,19 @@ router = Router(name="photo")
 # ─── входное фото ─────────────────────────────────────────────────────────────
 
 @router.message(F.photo)
-async def on_photo(message: types.Message, bot: Bot, state: FSMContext, locale: str = "ru") -> None:
+async def on_photo(
+    message: types.Message,
+    bot: Bot,
+    state: FSMContext,
+    session_factory: Any,
+    storage: Any,
+    locale: str = "ru",
+) -> None:
     tg = message.from_user
     if not tg or not message.photo:
         return
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -61,10 +66,9 @@ async def on_photo(message: types.Message, bot: Bot, state: FSMContext, locale: 
         return
     data = buf.read()
 
-    storage = build_storage()
     minio_key = await storage.put_receipt(project_id, data, filename=f"{photo.file_unique_id}.jpg")
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         receipt = Receipt(
             minio_key=minio_key,
             original_filename=f"{photo.file_unique_id}.jpg",
@@ -83,22 +87,23 @@ async def on_photo(message: types.Message, bot: Bot, state: FSMContext, locale: 
 # ─── inline-кнопки карточки ──────────────────────────────────────────────────
 
 @router.callback_query(F.data.startswith("rcpt:save:"))
-async def cb_save(query: types.CallbackQuery, locale: str = "ru") -> None:
+async def cb_save(
+    query: types.CallbackQuery,
+    session_factory: Any,
+    drafts: ReceiptDraftStore,
+    locale: str = "ru",
+) -> None:
     receipt_id = _rid(query)
     if receipt_id is None or not query.from_user:
         return
 
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        draft = await drafts.get(receipt_id)
-    finally:
-        await drafts.redis.aclose()
+    draft = await drafts.get(receipt_id)
 
     if draft is None or not draft.is_ready_to_save():
         await query.answer("Сумма не определена. Поправь вручную.", show_alert=True)
         return
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         receipt = await session.get(Receipt, receipt_id)
         if not receipt or receipt.ocr_status not in ("ok", "needs_review"):
             await query.answer("⚠️", show_alert=True)
@@ -144,13 +149,9 @@ async def cb_save(query: types.CallbackQuery, locale: str = "ru") -> None:
         await session.commit()
         project_name = project.name
 
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        await drafts.clear(receipt_id)
-    finally:
-        await drafts.redis.aclose()
+    await drafts.clear(receipt_id)
 
-    if query.message:
+    if isinstance(query.message, types.Message):
         try:
             await query.message.edit_reply_markup(reply_markup=None)
         except Exception:  # noqa: BLE001
@@ -160,17 +161,18 @@ async def cb_save(query: types.CallbackQuery, locale: str = "ru") -> None:
 
 
 @router.callback_query(F.data.startswith("rcpt:cancel:"))
-async def cb_cancel(query: types.CallbackQuery, state: FSMContext, locale: str = "ru") -> None:
+async def cb_cancel(
+    query: types.CallbackQuery,
+    state: FSMContext,
+    drafts: ReceiptDraftStore,
+    locale: str = "ru",
+) -> None:
     receipt_id = _rid(query)
     if receipt_id is None:
         return
     await state.clear()
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        await drafts.clear(receipt_id)
-    finally:
-        await drafts.redis.aclose()
-    if query.message:
+    await drafts.clear(receipt_id)
+    if isinstance(query.message, types.Message):
         try:
             await query.message.edit_reply_markup(reply_markup=None)
         except Exception:  # noqa: BLE001
@@ -187,12 +189,17 @@ async def cb_edit_amount(query: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(PhotoReviewStates.edit_amount)
     await state.update_data(receipt_id=receipt_id)
     await query.answer()
-    if query.message:
+    if isinstance(query.message, types.Message):
         await query.message.answer("Введи сумму (например: 4850.50)")
 
 
 @router.message(PhotoReviewStates.edit_amount)
-async def edit_amount_input(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
+async def edit_amount_input(
+    message: types.Message,
+    state: FSMContext,
+    drafts: ReceiptDraftStore,
+    locale: str = "ru",
+) -> None:
     try:
         minor = parse_amount_to_minor(message.text or "")
     except ValueError:
@@ -203,13 +210,9 @@ async def edit_amount_input(message: types.Message, state: FSMContext, locale: s
     if not receipt_id:
         await state.clear()
         return
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        await drafts.update(receipt_id, amount=minor / 100.0)
-    finally:
-        await drafts.redis.aclose()
+    await drafts.update(receipt_id, amount=minor / 100.0)
     await state.clear()
-    await _resend_card(message, receipt_id, locale)
+    await _resend_card(message, receipt_id, drafts, locale)
 
 
 @router.callback_query(F.data.startswith("rcpt:edit_category:"))
@@ -218,7 +221,7 @@ async def cb_edit_category(query: types.CallbackQuery, locale: str = "ru") -> No
     if receipt_id is None:
         return
     await query.answer()
-    if query.message:
+    if isinstance(query.message, types.Message):
         await query.message.answer(
             "Выбери категорию:",
             reply_markup=category_picker_keyboard(receipt_id, locale),
@@ -226,7 +229,11 @@ async def cb_edit_category(query: types.CallbackQuery, locale: str = "ru") -> No
 
 
 @router.callback_query(F.data.startswith("rcpt:set_category:"))
-async def cb_set_category(query: types.CallbackQuery, locale: str = "ru") -> None:
+async def cb_set_category(
+    query: types.CallbackQuery,
+    drafts: ReceiptDraftStore,
+    locale: str = "ru",
+) -> None:
     if not query.data:
         return
     parts = query.data.split(":")
@@ -236,14 +243,10 @@ async def cb_set_category(query: types.CallbackQuery, locale: str = "ru") -> Non
     key = parts[3]
     if parse_category(key) is None:
         return
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        await drafts.update(receipt_id, category=key)
-    finally:
-        await drafts.redis.aclose()
+    await drafts.update(receipt_id, category=key)
     await query.answer(f"✓ {label_for(key, locale)}")  # type: ignore[arg-type]
-    if query.message:
-        await _resend_card(query.message, receipt_id, locale)
+    if isinstance(query.message, types.Message):
+        await _resend_card(query.message, receipt_id, drafts, locale)
 
 
 @router.callback_query(F.data.startswith("rcpt:edit_vendor:"))
@@ -254,12 +257,17 @@ async def cb_edit_vendor(query: types.CallbackQuery, state: FSMContext) -> None:
     await state.set_state(PhotoReviewStates.edit_vendor)
     await state.update_data(receipt_id=receipt_id)
     await query.answer()
-    if query.message:
+    if isinstance(query.message, types.Message):
         await query.message.answer("Введи название вендора:")
 
 
 @router.message(PhotoReviewStates.edit_vendor)
-async def edit_vendor_input(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
+async def edit_vendor_input(
+    message: types.Message,
+    state: FSMContext,
+    drafts: ReceiptDraftStore,
+    locale: str = "ru",
+) -> None:
     vendor = (message.text or "").strip()[:256]
     if not vendor:
         return
@@ -268,13 +276,9 @@ async def edit_vendor_input(message: types.Message, state: FSMContext, locale: s
     if not receipt_id:
         await state.clear()
         return
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        await drafts.update(receipt_id, vendor=vendor)
-    finally:
-        await drafts.redis.aclose()
+    await drafts.update(receipt_id, vendor=vendor)
     await state.clear()
-    await _resend_card(message, receipt_id, locale)
+    await _resend_card(message, receipt_id, drafts, locale)
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
@@ -299,12 +303,13 @@ def _parse_date(value: Any) -> dt_date:
         return dt_date.today()
 
 
-async def _resend_card(message: types.Message, receipt_id: int, locale: str) -> None:
-    drafts = ReceiptDraftStore.from_env()
-    try:
-        draft = await drafts.get(receipt_id)
-    finally:
-        await drafts.redis.aclose()
+async def _resend_card(
+    message: types.Message,
+    receipt_id: int,
+    drafts: ReceiptDraftStore,
+    locale: str,
+) -> None:
+    draft = await drafts.get(receipt_id)
     if draft is None:
         await message.answer("⚠️ Чек устарел (>24ч), запиши ещё раз: /add")
         return

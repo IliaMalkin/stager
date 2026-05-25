@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from typing import Any
 
 from aiogram import Router, types
 from aiogram.filters import Command, CommandObject, CommandStart
@@ -11,7 +12,6 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import get_sessionmaker
 from packages.db.models import Invite, ProjectMember, User
 
 
@@ -23,17 +23,21 @@ router = Router(name="start")
 
 
 @router.message(CommandStart(deep_link=True))
-async def cmd_start_with_token(message: types.Message, command: CommandObject) -> None:
+async def cmd_start_with_token(
+    message: types.Message,
+    command: CommandObject,
+    session_factory: Any,
+) -> None:
     token = (command.args or "").strip()
     if not token:
-        await _greet(message)
+        await _greet(message, session_factory=session_factory)
         return
-    await _redeem_invite(message, token)
+    await _redeem_invite(message, token, session_factory=session_factory)
 
 
 @router.message(CommandStart())
-async def cmd_start_plain(message: types.Message) -> None:
-    await _greet(message)
+async def cmd_start_plain(message: types.Message, session_factory: Any) -> None:
+    await _greet(message, session_factory=session_factory)
 
 
 @router.message(Command("help"))
@@ -47,11 +51,11 @@ async def cmd_cancel(message: types.Message, state: FSMContext, locale: str = "r
     await message.answer(t("common.cancelled", locale))
 
 
-async def _greet(message: types.Message) -> None:
+async def _greet(message: types.Message, session_factory: Any) -> None:
     tg = message.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if user:
             await message.answer(t("start.welcome_back", user.locale or "ru"))
@@ -74,11 +78,11 @@ async def _greet(message: types.Message) -> None:
     await message.answer(t("start.welcome_new", locale))
 
 
-async def _redeem_invite(message: types.Message, token: str) -> None:
+async def _redeem_invite(message: types.Message, token: str, session_factory: Any) -> None:
     tg = message.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         invite = await session.scalar(select(Invite).where(Invite.token == token))
         if not invite:
             await message.answer(t("start.invite_not_found", "ru"))

@@ -11,13 +11,13 @@ from __future__ import annotations
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from aiogram import Bot, Router, types
 from aiogram.filters import Command, CommandObject
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Invite, ProjectMember, User
 
 router = Router(name="invites")
@@ -50,6 +50,7 @@ async def cmd_invite(
     message: types.Message,
     command: CommandObject,
     bot: Bot,
+    session_factory: Any,
     locale: str = "ru",
 ) -> None:
     tg = message.from_user
@@ -58,7 +59,7 @@ async def cmd_invite(
 
     quota_only, max_projects = _parse_args(command.args or "")
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return

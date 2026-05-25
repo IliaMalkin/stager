@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -10,7 +12,6 @@ from sqlalchemy import func, select
 from apps.bot.fsm.states import NewProjectStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import new_project_confirm_keyboard, project_switch_keyboard
-from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, ProjectMember, User
 from packages.domain.currency import format_amount, parse_amount_to_minor
 from packages.domain.quota import QuotaExceeded, check_quota, decrement_quota
@@ -72,7 +73,7 @@ async def _show_confirm(message: types.Message, state: FSMContext, locale: str) 
 async def np_cancel_inline(query: types.CallbackQuery, state: FSMContext, locale: str = "ru") -> None:
     await state.clear()
     await query.answer()
-    if query.message:
+    if isinstance(query.message, types.Message):
         try:
             await query.message.edit_reply_markup(reply_markup=None)
         except Exception:  # noqa: BLE001
@@ -81,12 +82,17 @@ async def np_cancel_inline(query: types.CallbackQuery, state: FSMContext, locale
 
 
 @router.callback_query(NewProjectStates.confirm, F.data == "np:confirm")
-async def np_confirm_inline(query: types.CallbackQuery, state: FSMContext, locale: str = "ru") -> None:
+async def np_confirm_inline(
+    query: types.CallbackQuery,
+    state: FSMContext,
+    session_factory: Any,
+    locale: str = "ru",
+) -> None:
     data = await state.get_data()
     tg = query.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             await state.clear()
@@ -117,7 +123,7 @@ async def np_confirm_inline(query: types.CallbackQuery, state: FSMContext, local
         created_name = project.name
     await state.clear()
     await query.answer("✅")
-    if query.message:
+    if isinstance(query.message, types.Message):
         try:
             await query.message.edit_reply_markup(reply_markup=None)
         except Exception:  # noqa: BLE001
@@ -127,12 +133,17 @@ async def np_confirm_inline(query: types.CallbackQuery, state: FSMContext, local
 
 # Текстовый /yes оставлен как fallback для старых сессий
 @router.message(NewProjectStates.confirm, Command("yes"))
-async def np_confirm_text(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
+async def np_confirm_text(
+    message: types.Message,
+    state: FSMContext,
+    session_factory: Any,
+    locale: str = "ru",
+) -> None:
     data = await state.get_data()
     tg = message.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             await state.clear()
@@ -169,11 +180,11 @@ async def np_confirm_text(message: types.Message, state: FSMContext, locale: str
 
 @router.message(Command("list"))
 @router.message(Command("switch"))
-async def cmd_list(message: types.Message, locale: str = "ru") -> None:
+async def cmd_list(message: types.Message, session_factory: Any, locale: str = "ru") -> None:
     tg = message.from_user
     if not tg:
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return
@@ -217,14 +228,18 @@ async def cmd_list(message: types.Message, locale: str = "ru") -> None:
 
 
 @router.callback_query(F.data.startswith("proj:switch:"))
-async def cb_switch(query: types.CallbackQuery, locale: str = "ru") -> None:
+async def cb_switch(
+    query: types.CallbackQuery,
+    session_factory: Any,
+    locale: str = "ru",
+) -> None:
     if not query.data or not query.from_user:
         return
     try:
         project_id = int(query.data.split(":")[2])
     except (IndexError, ValueError):
         return
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == query.from_user.id))
         if not user:
             return

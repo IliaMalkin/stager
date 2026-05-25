@@ -18,9 +18,11 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy import select
 
+from apps.bot.drafts import ReceiptDraftStore
 from packages.db.base import get_sessionmaker
 from packages.db.models import User
 from packages.observability import bind_request_id, clear_request_id
+from packages.storage import build_storage
 
 log = structlog.get_logger(__name__)
 
@@ -40,6 +42,40 @@ class TracingMiddleware(BaseMiddleware):
             return await handler(event, data)
         finally:
             clear_request_id()
+
+
+class ResourcesMiddleware(BaseMiddleware):
+    """Inject process-wide infrastructure resources into aiogram handler data."""
+
+    def __init__(self) -> None:
+        self._session_factory: Any | None = None
+        self._drafts: ReceiptDraftStore | None = None
+        self._storage: Any | None = None
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        if self._session_factory is None:
+            self._session_factory = get_sessionmaker()
+        if self._drafts is None:
+            self._drafts = ReceiptDraftStore.from_env()
+        if self._storage is None:
+            self._storage = build_storage()
+
+        data["session_factory"] = self._session_factory
+        data["drafts"] = self._drafts
+        data["storage"] = self._storage
+        return await handler(event, data)
+
+    async def close(self) -> None:
+        if self._drafts is not None:
+            await self._drafts.redis.aclose()
+        close = getattr(self._storage, "aclose", None)
+        if close is not None:
+            await close()
 
 
 class AuthMiddleware(BaseMiddleware):
@@ -79,7 +115,8 @@ class AuthMiddleware(BaseMiddleware):
         if text.startswith("/start"):
             return await handler(event, data)
 
-        async with get_sessionmaker()() as session:
+        session_factory = data.get("session_factory") or get_sessionmaker()
+        async with session_factory() as session:
             user = await session.scalar(select(User).where(User.telegram_id == tg_user_id))
         if user:
             data["current_user"] = user

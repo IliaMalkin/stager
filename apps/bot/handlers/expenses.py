@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from aiogram import Router, types
 from aiogram.filters import Command, CommandObject
 from sqlalchemy import select
 
 from apps.bot.i18n import t
-from packages.db.base import get_sessionmaker
 from packages.db.models import ActiveContext, Expense, Project, User
 from packages.domain.categories import label_for
 from packages.domain.currency import format_amount
@@ -19,7 +19,12 @@ router = Router(name="expenses")
 
 
 @router.message(Command("add"))
-async def cmd_add(message: types.Message, command: CommandObject, locale: str = "ru") -> None:
+async def cmd_add(
+    message: types.Message,
+    command: CommandObject,
+    session_factory: Any,
+    locale: str = "ru",
+) -> None:
     tg = message.from_user
     if not tg:
         return
@@ -29,7 +34,7 @@ async def cmd_add(message: types.Message, command: CommandObject, locale: str = 
         await message.answer(t("expenses.parse_error", locale, error=str(exc)))
         return
 
-    async with get_sessionmaker()() as session:
+    async with session_factory() as session:
         user = await session.scalar(select(User).where(User.telegram_id == tg.id))
         if not user:
             return

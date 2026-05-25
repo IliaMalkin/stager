@@ -73,9 +73,9 @@ def _mk_message(tg_id: int, username: str = "bob") -> MagicMock:
 
 async def test_redeem_invite_creates_user_and_member(db_engine, fixtures):
     msg = _mk_message(tg_id=444_555_666)
-    await _redeem_invite(msg, "testinvite12345")
-
     factory = async_sessionmaker(db_engine, expire_on_commit=False)
+    await _redeem_invite(msg, "testinvite12345", session_factory=factory)
+
     async with factory() as s:
         user = await s.scalar(select(User).where(User.telegram_id == 444_555_666))
         assert user is not None
@@ -117,7 +117,7 @@ async def test_redeem_expired_invite_rejected(db_engine, fixtures):
         await s.commit()
 
     msg = _mk_message(tg_id=777_888_999)
-    await _redeem_invite(msg, "expiredinvite")
+    await _redeem_invite(msg, "expiredinvite", session_factory=factory)
     msg.answer.assert_awaited_once()
     # сообщение пользователю содержит "истёк"
     args = msg.answer.await_args
@@ -136,7 +136,8 @@ async def test_redeem_expired_invite_rejected(db_engine, fixtures):
 
 async def test_redeem_unknown_token(db_engine, fixtures):
     msg = _mk_message(tg_id=999_000_111)
-    await _redeem_invite(msg, "nonexistent")
+    factory = async_sessionmaker(db_engine, expire_on_commit=False)
+    await _redeem_invite(msg, "nonexistent", session_factory=factory)
     msg.answer.assert_awaited_once()
     args = msg.answer.await_args
     assert "не найден" in args.args[0]

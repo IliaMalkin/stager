@@ -18,7 +18,12 @@ from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommand
 from redis.asyncio import Redis
 
 from apps.bot.handlers import expenses, invites, photo, projects, report, start
-from apps.bot.middlewares import AuthMiddleware, I18nMiddleware, TracingMiddleware
+from apps.bot.middlewares import (
+    AuthMiddleware,
+    I18nMiddleware,
+    ResourcesMiddleware,
+    TracingMiddleware,
+)
 from packages.observability import configure_logging, init_sentry
 
 log = structlog.get_logger(__name__)
@@ -86,11 +91,13 @@ async def main() -> None:
     dp = Dispatcher(storage=storage)
 
     tracing_mw = TracingMiddleware()
+    resources_mw = ResourcesMiddleware()
     auth_mw = AuthMiddleware(whitelist=_whitelist())
     i18n_mw = I18nMiddleware(default_locale=os.getenv("APP_DEFAULT_LOCALE", "ru"))
     for level in (dp.message, dp.callback_query):
-        # порядок важен: tracing → auth → i18n → handler
+        # порядок важен: tracing → resources → auth → i18n → handler
         level.outer_middleware(tracing_mw)
+        level.outer_middleware(resources_mw)
         level.outer_middleware(auth_mw)
         level.outer_middleware(i18n_mw)
 
@@ -107,6 +114,7 @@ async def main() -> None:
     try:
         await dp.start_polling(bot)
     finally:
+        await resources_mw.close()
         await bot.session.close()
         await redis.aclose()
 
