@@ -5,7 +5,6 @@ from aiogram.fsm.state import State, StatesGroup
 
 class NewProjectStates(StatesGroup):
     name = State()
-    budget = State()
     confirm = State()
 
 
@@ -15,3 +14,9 @@ class PhotoReviewStates(StatesGroup):
     edit_amount = State()
     edit_category = State()
     edit_vendor = State()
+
+
+class AddExpenseStates(StatesGroup):
+    amount = State()
+    category = State()
+    description = State()

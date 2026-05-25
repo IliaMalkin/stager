@@ -13,11 +13,7 @@
   },
   "newproject": {
     "ask_name": "Project name?",
-    "ask_budget": "Budget (number) or /skip:",
-    "bad_budget": "Couldn't parse budget. Enter a number or /skip.",
-    "confirm": "Creating: <b>{name}</b>{budget_line}\nCurrency: RUB\n\nConfirm with the button or /cancel",
-    "budget_line_with": "\nBudget: {amount}",
-    "budget_line_none": "",
+    "confirm": "Creating: <b>{name}</b>\nCurrency: RUB\n\nConfirm with the button or /cancel",
     "created": "✅ Created project: <b>{name}</b>\nIt's now active."
   },
   "projects": {
@@ -32,7 +28,14 @@
   "expenses": {
     "added": "✅ {amount} · {category}{desc}",
     "added_desc_line": "\n{desc}",
-    "parse_error": "{error}\n\nExample: /add 4850 furniture sofa from IKEA"
+    "parse_error": "{error}\n\nExample: /add 4850 furniture sofa from IKEA",
+    "dialog": {
+      "ask_amount": "Amount?",
+      "ask_category": "Category?",
+      "ask_description": "Description?",
+      "bad_amount": "Couldn't parse the amount. Enter a number, for example 4850 or 4850.50.",
+      "skip_hint": "You can skip it: /skip"
+    }
   },
   "photo": {
     "ack": "📷 Got it. Processing receipt…",
@@ -42,6 +45,12 @@
     "card_warn_low_confidence": "\n\n⚠️ Low confidence — double-check fields.",
     "saved": "✅ Saved into project <b>{project}</b>.",
     "cancelled": "Cancelled."
+  },
+  "freetext": {
+    "ask_confirm": "💰 Record {amount} as an expense?\n{desc}",
+    "no_active": "First use /list to choose a project, then I will save it.",
+    "save_button": "Yes, add",
+    "cancel_button": "Cancel"
   },
   "report": {
     "empty": "No expenses in the active project yet.",

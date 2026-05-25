@@ -13,7 +13,7 @@ from apps.bot.fsm.states import NewProjectStates
 from apps.bot.i18n import t
 from apps.bot.keyboards import new_project_confirm_keyboard, project_switch_keyboard
 from packages.db.models import ActiveContext, Expense, Project, ProjectMember, User
-from packages.domain.currency import format_amount, parse_amount_to_minor
+from packages.domain.currency import format_amount
 from packages.domain.quota import QuotaExceeded, check_quota, decrement_quota
 
 router = Router(name="projects")
@@ -23,48 +23,28 @@ router = Router(name="projects")
 
 @router.message(Command("newproject"))
 async def cmd_newproject(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
+    await state.clear()
     await state.set_state(NewProjectStates.name)
     await message.answer(t("newproject.ask_name", locale))
 
 
-@router.message(NewProjectStates.name)
+@router.message(NewProjectStates.name, F.text, ~F.text.startswith("/"))
 async def np_name(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
     name = (message.text or "").strip()
+    if name.startswith("/"):
+        return
     if not name:
         await message.answer(t("newproject.ask_name", locale))
         return
     await state.update_data(name=name[:256])
-    await state.set_state(NewProjectStates.budget)
-    await message.answer(t("newproject.ask_budget", locale))
-
-
-@router.message(NewProjectStates.budget, Command("skip"))
-async def np_skip_budget(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
-    await state.update_data(budget_minor=None)
-    await _show_confirm(message, state, locale)
-
-
-@router.message(NewProjectStates.budget)
-async def np_budget(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
-    try:
-        minor = parse_amount_to_minor(message.text or "")
-    except ValueError:
-        await message.answer(t("newproject.bad_budget", locale))
-        return
-    await state.update_data(budget_minor=minor)
     await _show_confirm(message, state, locale)
 
 
 async def _show_confirm(message: types.Message, state: FSMContext, locale: str) -> None:
     data = await state.get_data()
-    budget = data.get("budget_minor")
-    if budget is not None:
-        budget_line = t("newproject.budget_line_with", locale, amount=format_amount(budget, "RUB"))
-    else:
-        budget_line = t("newproject.budget_line_none", locale)
     await state.set_state(NewProjectStates.confirm)
     await message.answer(
-        t("newproject.confirm", locale, name=data["name"], budget_line=budget_line),
+        t("newproject.confirm", locale, name=data["name"]),
         reply_markup=new_project_confirm_keyboard(),
     )
 
@@ -107,7 +87,7 @@ async def np_confirm_inline(
             owner_user_id=user.id,
             name=data["name"],
             currency="RUB",
-            budget_minor=data.get("budget_minor"),
+            budget_minor=None,
             status="active",
         )
         session.add(project)
@@ -158,7 +138,7 @@ async def np_confirm_text(
             owner_user_id=user.id,
             name=data["name"],
             currency="RUB",
-            budget_minor=data.get("budget_minor"),
+            budget_minor=None,
             status="active",
         )
         session.add(project)
@@ -180,7 +160,14 @@ async def np_confirm_text(
 
 @router.message(Command("list"))
 @router.message(Command("switch"))
-async def cmd_list(message: types.Message, session_factory: Any, locale: str = "ru") -> None:
+async def cmd_list(
+    message: types.Message,
+    session_factory: Any,
+    locale: str = "ru",
+    state: FSMContext | None = None,
+) -> None:
+    if state is not None:
+        await state.clear()
     tg = message.from_user
     if not tg:
         return

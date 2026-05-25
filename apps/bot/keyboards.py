@@ -6,6 +6,16 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from packages.domain.categories import CATEGORY_KEYS, label_for
 
+ADD_CATEGORY_KEYS = (
+    "furniture",
+    "decor",
+    "textile",
+    "delivery",
+    "labor",
+    "supplies",
+    "transport",
+)
+
 
 def review_card_keyboard(receipt_id: int, *, can_save: bool = True, locale: str = "ru") -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
@@ -36,6 +46,25 @@ def category_picker_keyboard(receipt_id: int, locale: str = "ru") -> InlineKeybo
             chunk = []
     if chunk:
         rows.append(chunk)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def add_category_picker_keyboard(locale: str = "ru") -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    chunk: list[InlineKeyboardButton] = []
+    for key in ADD_CATEGORY_KEYS:
+        chunk.append(InlineKeyboardButton(
+            text=label_for(key, locale).capitalize(),  # type: ignore[arg-type]
+            callback_data=f"add:cat:{key}",
+        ))
+        if len(chunk) == 2:
+            rows.append(chunk)
+            chunk = []
+    chunk.append(InlineKeyboardButton(
+        text=label_for("other", locale).capitalize(),
+        callback_data="add:cat:skip",
+    ))
+    rows.append(chunk)
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

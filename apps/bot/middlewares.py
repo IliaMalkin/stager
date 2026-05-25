@@ -19,7 +19,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy import select
 
-from apps.bot.drafts import ReceiptDraftStore
+from apps.bot.drafts import FreeTextDraftStore, ReceiptDraftStore
 from packages.db.base import get_sessionmaker
 from packages.db.models import User
 from packages.observability import bind_request_id, clear_request_id
@@ -51,6 +51,7 @@ class ResourcesMiddleware(BaseMiddleware):
     def __init__(self) -> None:
         self._session_factory: Any | None = None
         self._drafts: ReceiptDraftStore | None = None
+        self._freetext_drafts: FreeTextDraftStore | None = None
         self._producer: TaskProducer | None = None
 
     async def __call__(
@@ -63,17 +64,22 @@ class ResourcesMiddleware(BaseMiddleware):
             self._session_factory = get_sessionmaker()
         if self._drafts is None:
             self._drafts = ReceiptDraftStore.from_env()
+        if self._freetext_drafts is None:
+            self._freetext_drafts = FreeTextDraftStore.from_env()
         if self._producer is None:
             self._producer = TaskProducer(os.environ["REDIS_URL"])
 
         data["session_factory"] = self._session_factory
         data["drafts"] = self._drafts
+        data["freetext_drafts"] = self._freetext_drafts
         data["producer"] = self._producer
         return await handler(event, data)
 
     async def close(self) -> None:
         if self._drafts is not None:
             await self._drafts.redis.aclose()
+        if self._freetext_drafts is not None:
+            await self._freetext_drafts.redis.aclose()
 
 
 class AuthMiddleware(BaseMiddleware):

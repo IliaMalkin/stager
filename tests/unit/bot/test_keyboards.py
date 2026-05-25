@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from apps.bot.keyboards import (
+    add_category_picker_keyboard,
     category_picker_keyboard,
     new_project_confirm_keyboard,
     project_switch_keyboard,
@@ -34,6 +35,16 @@ def test_category_picker_has_all_10():
     cb_data = [b.callback_data for b in buttons]
     # 10 categories
     assert sum(1 for d in cb_data if d and d.startswith("rcpt:set_category:42:")) == 10
+
+
+def test_add_category_picker_has_categories_and_skip():
+    kb = add_category_picker_keyboard("ru")
+    buttons = [b for row in kb.inline_keyboard for b in row]
+    cb_data = [b.callback_data for b in buttons]
+
+    assert "add:cat:furniture" in cb_data
+    assert "add:cat:skip" in cb_data
+    assert all(len(row) <= 2 for row in kb.inline_keyboard)
 
 
 def test_project_switch_marks_active():

@@ -13,11 +13,7 @@
   },
   "newproject": {
     "ask_name": "Как назовём проект?",
-    "ask_budget": "Бюджет (число) или /skip:",
-    "bad_budget": "Не понял бюджет. Введи число или /skip.",
-    "confirm": "Создаю: <b>{name}</b>{budget_line}\nВалюта: RUB\n\nПодтверди кнопкой ниже или /cancel",
-    "budget_line_with": "\nБюджет: {amount}",
-    "budget_line_none": "",
+    "confirm": "Создаю: <b>{name}</b>\nВалюта: RUB\n\nПодтверди кнопкой ниже или /cancel",
     "created": "✅ Создан проект: <b>{name}</b>\nОн активен."
   },
   "projects": {
@@ -32,7 +28,14 @@
   "expenses": {
     "added": "✅ {amount} · {category}{desc}",
     "added_desc_line": "\n{desc}",
-    "parse_error": "{error}\n\nПример: /add 4850 мебель диван из ИКЕА"
+    "parse_error": "{error}\n\nПример: /add 4850 мебель диван из ИКЕА",
+    "dialog": {
+      "ask_amount": "Сумма?",
+      "ask_category": "Категория?",
+      "ask_description": "Описание?",
+      "bad_amount": "Не понял сумму. Напиши число, например 4850 или 4850.50.",
+      "skip_hint": "Можно пропустить: /skip"
+    }
   },
   "photo": {
     "ack": "📷 Принял. Обрабатываю чек…",
@@ -42,6 +45,12 @@
     "card_warn_low_confidence": "\n\n⚠️ Уверенность низкая — проверь поля.",
     "saved": "✅ Сохранено в проект <b>{project}</b>.",
     "cancelled": "Отменено."
+  },
+  "freetext": {
+    "ask_confirm": "💰 Записать {amount} как трату?\n{desc}",
+    "no_active": "Сначала /list — выбери проект, потом я запишу.",
+    "save_button": "Да, добавить",
+    "cancel_button": "Отмена"
   },
   "report": {
     "empty": "В активном проекте ещё нет расходов.",

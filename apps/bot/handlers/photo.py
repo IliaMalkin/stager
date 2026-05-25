@@ -174,13 +174,15 @@ async def cb_edit_amount(query: types.CallbackQuery, state: FSMContext) -> None:
         await query.message.answer("Введи сумму (например: 4850.50)")
 
 
-@router.message(PhotoReviewStates.edit_amount)
+@router.message(PhotoReviewStates.edit_amount, F.text, ~F.text.startswith("/"))
 async def edit_amount_input(
     message: types.Message,
     state: FSMContext,
     drafts: ReceiptDraftStore,
     locale: str = "ru",
 ) -> None:
+    if (message.text or "").startswith("/"):
+        return
     try:
         minor = parse_amount_to_minor(message.text or "")
     except ValueError:
@@ -242,13 +244,15 @@ async def cb_edit_vendor(query: types.CallbackQuery, state: FSMContext) -> None:
         await query.message.answer("Введи название вендора:")
 
 
-@router.message(PhotoReviewStates.edit_vendor)
+@router.message(PhotoReviewStates.edit_vendor, F.text, ~F.text.startswith("/"))
 async def edit_vendor_input(
     message: types.Message,
     state: FSMContext,
     drafts: ReceiptDraftStore,
     locale: str = "ru",
 ) -> None:
+    if (message.text or "").startswith("/"):
+        return
     vendor = (message.text or "").strip()[:256]
     if not vendor:
         return

@@ -6,6 +6,7 @@ from typing import Any
 
 from aiogram import Bot, F, Router, types
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile
 from sqlalchemy import select
 
@@ -34,7 +35,14 @@ def _ru_count(n: int) -> str:
 
 
 @router.message(Command("report"))
-async def cmd_report(message: types.Message, session_factory: Any, locale: str = "ru") -> None:
+async def cmd_report(
+    message: types.Message,
+    session_factory: Any,
+    locale: str = "ru",
+    state: FSMContext | None = None,
+) -> None:
+    if state is not None:
+        await state.clear()
     tg = message.from_user
     if not tg:
         return

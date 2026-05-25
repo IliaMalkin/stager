@@ -15,6 +15,7 @@ from typing import Any
 
 from aiogram import Bot, Router, types
 from aiogram.filters import Command, CommandObject
+from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 
 from apps.bot.i18n import t
@@ -52,7 +53,10 @@ async def cmd_invite(
     bot: Bot,
     session_factory: Any,
     locale: str = "ru",
+    state: FSMContext | None = None,
 ) -> None:
+    if state is not None:
+        await state.clear()
     tg = message.from_user
     if not tg:
         return

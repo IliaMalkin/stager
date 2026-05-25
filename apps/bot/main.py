@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from datetime import timedelta
 
 import structlog
 from aiogram import Bot, Dispatcher
@@ -17,7 +18,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeDefault
 from redis.asyncio import Redis
 
-from apps.bot.handlers import expenses, invites, photo, projects, report, start
+from apps.bot.handlers import expenses, freetext, invites, photo, projects, report, start
 from apps.bot.middlewares import (
     AuthMiddleware,
     I18nMiddleware,
@@ -86,7 +87,11 @@ async def main() -> None:
     redis_url = os.environ["REDIS_URL"]
 
     redis = Redis.from_url(redis_url)
-    storage = RedisStorage(redis=redis)
+    storage = RedisStorage(
+        redis=redis,
+        state_ttl=timedelta(minutes=10),
+        data_ttl=timedelta(minutes=10),
+    )
     bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=storage)
 
@@ -107,6 +112,7 @@ async def main() -> None:
     dp.include_router(report.router)
     dp.include_router(invites.router)
     dp.include_router(photo.router)
+    dp.include_router(freetext.router)
 
     me = await bot.get_me()
     await _register_commands(bot)

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from aiogram import Router, types
+from aiogram.filters import StateFilter
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
@@ -27,7 +28,10 @@ async def cmd_start_with_token(
     message: types.Message,
     command: CommandObject,
     session_factory: Any,
+    state: FSMContext | None = None,
 ) -> None:
+    if state is not None:
+        await state.clear()
     token = (command.args or "").strip()
     if not token:
         await _greet(message, session_factory=session_factory)
@@ -36,16 +40,28 @@ async def cmd_start_with_token(
 
 
 @router.message(CommandStart())
-async def cmd_start_plain(message: types.Message, session_factory: Any) -> None:
+async def cmd_start_plain(
+    message: types.Message,
+    session_factory: Any,
+    state: FSMContext | None = None,
+) -> None:
+    if state is not None:
+        await state.clear()
     await _greet(message, session_factory=session_factory)
 
 
 @router.message(Command("help"))
-async def cmd_help(message: types.Message, locale: str = "ru") -> None:
+async def cmd_help(
+    message: types.Message,
+    locale: str = "ru",
+    state: FSMContext | None = None,
+) -> None:
+    if state is not None:
+        await state.clear()
     await message.answer(t("help.text", locale))
 
 
-@router.message(Command("cancel"))
+@router.message(Command("cancel"), StateFilter("*"))
 async def cmd_cancel(message: types.Message, state: FSMContext, locale: str = "ru") -> None:
     await state.clear()
     await message.answer(t("common.cancelled", locale))
