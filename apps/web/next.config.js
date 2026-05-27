@@ -1,8 +1,13 @@
 /** @type {import('next').NextConfig} */
+const allowedOrigins = (process.env.NEXT_ALLOWED_ORIGINS || 'localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const nextConfig = {
   output: 'standalone',
   experimental: {
-    serverActions: { allowedOrigins: ['localhost:3000', 'stager.kudnever.dev'] },
+    serverActions: { allowedOrigins },
   },
   async rewrites() {
     // Поход с клиента/SSR в /api/v1/* через тот же origin —

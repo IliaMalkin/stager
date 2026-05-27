@@ -31,7 +31,7 @@ services:
     restart: always
     environment:
       APP_ENV: prod
-      CORS_ALLOW_ORIGINS: https://stager.kudnever.dev
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-https://example.com}
     ports: !reset []
 
   worker:
@@ -48,6 +48,7 @@ services:
       APP_ENV: prod
       NODE_ENV: production
       INTERNAL_API_BASE: http://api:8000
+      NEXT_ALLOWED_ORIGINS: ${NEXT_ALLOWED_ORIGINS:-example.com}
     ports: !reset []
 
   caddy:

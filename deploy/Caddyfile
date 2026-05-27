@@ -1,6 +1,6 @@
 # Stager reverse proxy. Caddy сам выписывает Let's Encrypt сертификат.
 
-stager.kudnever.dev {
+{$APP_DOMAIN:localhost} {
     encode gzip zstd
 
     # API + docs идут на FastAPI

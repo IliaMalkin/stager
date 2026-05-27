@@ -1,64 +1,65 @@
 # Production deploy
 
-Эти файлы — public. Реальные секреты живут в private repo `kudnever/stager-deploy` и в `.env.production` на сервере.
+These files are public. Keep real secrets, server IPs, hostnames, and
+production-only overrides outside this repository.
 
-## Первичная установка на Hetzner (ubuntu-4gb-nbg1-2, 178.105.163.2)
+## Initial setup on a VPS
 
 ```bash
-# 1. Поставить Docker если нет (есть — пропусти)
-ssh root@178.105.163.2
-docker --version  # должно быть 29+
+# 1. Install Docker if needed.
+ssh root@<server-ip>
+docker --version
 
-# 2. Клонировать
+# 2. Clone the repository.
 mkdir -p /opt/stager && cd /opt/stager
 git clone https://github.com/kudnever/stager.git .
 
-# 3. Положить .env.production (в репо его НЕТ — копируем руками)
-scp .env.production root@178.105.163.2:/opt/stager/.env
+# 3. Copy the production env file. Do not commit it.
+scp .env.production root@<server-ip>:/opt/stager/.env
 
-# 4. DNS: добавить A-запись stager.kudnever.dev → 178.105.163.2
+# 4. DNS: point your app domain at the server.
 
-# 5. Запустить
+# 5. Start the stack.
 cd /opt/stager
 docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres redis minio
 
-# Ждём 10 сек, миграции
+# Apply migrations.
 docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm api alembic upgrade head
 
-# Создаём admin для web
+# Create the first web admin.
 docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm api \
-    python -m apps.api.cli create-admin ilyamalkinn@gmail.com '<password>' 'Ilia'
+    python -m apps.api.cli create-admin '<admin-email>' '<password>' '<full-name>'
 
-# Поднимаем всё остальное
+# Start everything else.
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-# 6. Бэкап cron
+# 6. Backup cron.
 sudo cp deploy/backup.sh /etc/cron.daily/stager-backup
 sudo chmod +x /etc/cron.daily/stager-backup
 ```
 
-## Smoke test после deploy
+## Smoke test after deploy
 
 ```bash
-curl -s https://stager.kudnever.dev/health
-curl -s https://stager.kudnever.dev/api/v1/docs   # 200, html
-# Telegram: /start твоим botid'ом — должно ответить
+curl -s https://<app-domain>/health
+curl -s https://<app-domain>/api/v1/docs
+# Telegram: /start should receive a bot response.
 ```
 
-## Откат
+## Rollback
 
 ```bash
-# Если миграция сломала — даунгрейд:
+# If a migration breaks:
 docker compose ... run --rm api alembic downgrade -1
 
-# Полный откат — checkout предыдущего тега + пересобрать
+# Full rollback: checkout the previous tag and rebuild.
 git checkout v0.1.0
 docker compose ... up -d --build
 ```
 
-## Где смотреть логи
+## Logs
 
 - `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f bot api worker`
-- Sentry dashboard (если DSN задан в .env)
+- Sentry dashboard, if `SENTRY_DSN` is configured.
 - Caddy access logs: `docker compose ... logs caddy`
