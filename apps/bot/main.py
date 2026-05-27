@@ -40,6 +40,7 @@ _COMMANDS_RU = [
     BotCommand(command="list",       description="📋 Мои проекты"),
     BotCommand(command="switch",     description="🔁 Переключить активный"),
     BotCommand(command="add",        description="✍️ Записать трату текстом"),
+    BotCommand(command="expenses",   description="🧾 Последние траты и удаление"),
     BotCommand(command="report",     description="📊 Отчёт по активному проекту"),
     BotCommand(command="invite",     description="🔗 Пригласить в проект"),
     BotCommand(command="help",       description="❓ Справка"),
