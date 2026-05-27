@@ -1,6 +1,6 @@
 # MVP Roadmap — 2 недели
 
-Цель: к концу Week 2 мама шлёт первый чек в прод-бота на `stager.kudnever.dev`.
+Цель: к концу Week 2 пользователь шлёт первый чек в прод-бота.
 
 Дни разбиты так, что **независимые задачи помечены `[||]`** — их можно параллелить через Claude Code subagents.
 
@@ -118,22 +118,22 @@
 ### Day 12 (Вс) — prod deploy на Hetzner [твои руки]
 
 - [x] `docker-compose.prod.yml` — overlay с restart=always + закрытыми портами
-- [x] `deploy/Caddyfile` для stager.kudnever.dev
+- [x] `deploy/Caddyfile` для `<app-domain>`
 - [x] `deploy/backup.sh` — pg_dump cron + MinIO mirror
 - [x] `deploy/README.md` — пошаговый runbook
-- [ ] DNS A-запись `stager.kudnever.dev` → 178.105.163.2 [ручное]
+- [ ] DNS A-запись `<app-domain>` → `<server-ip>` [ручное]
 - [ ] `.env.production` залить на сервер [ручное]
 - [ ] `docker compose ... up -d` [ручное]
 
-### Day 13 (Пн) — UAT с мамой ✅ (готов сценарий)
+### Day 13 (Пн) — UAT с пользователем ✅ (готов сценарий)
 
 - [x] [`UAT.md`](UAT.md) — пошаговый скрипт прогона на 20 минут
 - [ ] Реальный прогон [ручное]
 - [ ] Сбор жалоб → `UAT_FEEDBACK.md`
 
-### Day 14 (Вт) — стабилизация + CV-полировка ✅ (частично)
+### Day 14 (Вт) — стабилизация + public docs ✅ (частично)
 
-- [x] README.md обновлён под CV-аудиторию: badges, tech-stack table, LLM router как hero-feature
+- [x] README.md обновлён под публичный repo: badges, tech-stack table, LLM router
 - [x] [`scripts/probe_mimo.py`](scripts/probe_mimo.py) — sanity check MiMo vision API до Day 5
 - [ ] Демо-гифка [ручное, после UAT]
 - [ ] git tag `v0.1.0` + GitHub release [ручное]

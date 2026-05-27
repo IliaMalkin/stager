@@ -1,6 +1,6 @@
 # Чек-лист перед `git push` в public
 
-Стейджер задумывается как open-source CV-кейс. Данные мамы и production-секреты живут отдельно. Пройдись по этому списку перед каждым публичным релизом.
+Stager is a public portfolio repo. Production secrets, real user data, server IPs, and deployment-only paths stay outside git. Run this checklist before each public release.
 
 ## Что проверить локально (один раз перед `git init` + push)
 
@@ -12,7 +12,7 @@
 grep -rE "(7[0-9]{9}:|AIza[0-9A-Za-z\\-_]{35})" --include="*.py" --include="*.ts" --include="*.tsx" --include="*.yml" --include="*.yaml" --include="*.json" .
 # должно вернуть пусто (или только в .env.example как placeholder)
 
-# 3. Никаких telegram_id мамы или знакомых в коде:
+# 3. Никаких реальных telegram_id пользователей в коде:
 grep -rE "TELEGRAM_WHITELIST_IDS=[0-9]" .
 # должно быть только в .env.example (пустое) и docs
 
@@ -25,36 +25,36 @@ cat scripts/seed_dev.py | grep -E "(кв\.|Парнас|клиент)"  # раб
 - `.env*` (кроме `.env.example`)
 - бэкапы БД: `*.sql.gz`, `pg_dump*`
 - фотографии чеков: `data/`, `backups/`, `*.jpg`, `*.png`
-- production Compose с реальными host-mounts: `docker-compose.prod.yml` с конкретными путями — храним в отдельном private repo `kudnever/stager-deploy`
+- production Compose с реальными host-mounts, IP, доменами и backup paths
 
-## Что лежит в private repo (`kudnever/stager-deploy`)
+## Что хранится приватно
 
-Создашь его руками после Day 12. Туда уходит:
-- `docker-compose.prod.yml` с правильными volumes и `restart: always`
-- `Caddyfile` с реальным доменом
+Туда уходит:
+- production overrides с правильными volumes и `restart: always`
+- Caddyfile или reverse-proxy config с реальным доменом
 - `.env.production` (gitignored даже в private repo — храним в Bitwarden / 1Password)
 - `scripts/backup.sh` с конкретным путём `/var/backups/stager/`
 - `scripts/restore.sh`
 
-Public repo (`kudnever/stager`) ссылается на этот private как «отдельный deploy repo» в README, без раскрытия содержимого.
+Public repo не раскрывает реальные IP, домены, host paths или имена production-пользователей.
 
 ## Что обязательно ДОЛЖНО быть в public репо
 
-Это и есть CV-сигнал — без этих файлов проект не воспринимается серьёзно.
+Без этих файлов проект хуже проверяется ревьюером.
 
 - [x] [README.md](README.md) с архитектурной картинкой и badge'ом CI
 - [x] [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md), [REPO_STRUCTURE.md](REPO_STRUCTURE.md)
 - [x] [LICENSE](LICENSE) (MIT)
 - [x] [.env.example](.env.example) с ВСЕМИ ключами и комментариями
-- [x] CI workflow с зелёным статусом ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+- [x] CI workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml))
 - [x] Тесты с coverage 60%+
-- [x] [README-mom.ru.md](README-mom.ru.md) — отдельная инструкция для мамы (показывает что проект реальный, не учебный)
+- [x] [README-user.ru.md](README-user.ru.md) — отдельная инструкция для конечного пользователя
 
 ## Финальная команда
 
 ```bash
 # Когда всё проверил:
-cd C:\Users\V\Documents\Claude\Stager
+cd <repo>
 git init
 git add .
 git status   # глазами просмотри ещё раз!

@@ -1,6 +1,6 @@
 # Stager — Architecture & MVP Spec
 
-> Telegram-бот + web-админка для учёта расходов по проектам. Главный пользователь — мама-home-stager. MVP за 2 недели. Junior-grade монолит.
+> Telegram-бот + web-админка для учёта расходов по проектам. Главный сценарий — home-staging проекты с большим количеством чеков. MVP за 2 недели. Junior-grade монолит.
 
 ---
 
@@ -8,17 +8,17 @@
 
 | # | Stakeholder | Главное что должно работать |
 |---|---|---|
-| A | Мама (home-stager в РФ) | Фоткает чек в чате с ботом → к концу проекта получает CSV/Excel со всеми тратами по категориям |
+| A | Home-staging user | Фоткает чек в чате с ботом → к концу проекта получает CSV/Excel со всеми тратами по категориям |
 | B | Илья (личный учёт) | Тот же flow для других доменов (мульти-тенант с дня 1) |
-| C | CV / job market | Покрывать ≥50% требований из 11 отслеживаемых junior-вакансий за 1 месяц |
+| C | Portfolio / job market | Покрывать ≥50% требований из отслеживаемых junior-вакансий за 1 месяц |
 
-**Одна фраза для мамы:** «К концу проекта итоговая таблица всех трат строится сама — больше не собираешь по чатам».
+**Одна фраза для пользователя:** «К концу проекта итоговая таблица всех трат строится сама — больше не собираешь по чатам».
 
 ---
 
 ## 2. Personas
 
-**Мама.** Ведёт 2-3 проекта параллельно. Сейчас пишет траты в чат с заказчиком. Чеки фоткает «для подстраховки». В магазине, на стройке, в машине — мобильный сценарий. Не любит формы, любит сообщения.
+**Home-staging user.** Ведёт 2-3 проекта параллельно. Сейчас пишет траты в чат с заказчиком. Чеки фоткает «для подстраховки». В магазине, на стройке, в машине — мобильный сценарий. Не любит формы, любит сообщения.
 
 **Илья.** Personal finance через тот же бот. Привык к CLI и pet-проектам. Будет также админом web-интерфейса.
 
@@ -28,7 +28,7 @@
 
 ### US-1. Регистрация по invite
 
-- Мама получает от Ильи ссылку `t.me/stager_bot?start=<invite_token>`
+- Пользователь получает invite-ссылку `t.me/<bot_username>?start=<invite_token>`
 - `/start <token>` → запись в `users`, `project_members` (если токен привязан к проекту), приветственное сообщение по-русски
 - **AC:** без валидного токена и не в whitelist → бот отвечает «бот закрытый, нужен инвайт» и ничего не пишет в БД
 
@@ -51,7 +51,7 @@
 
 ### US-5. Фото чека (главный flow)
 
-1. Мама шлёт фото
+1. Пользователь шлёт фото
 2. Бот мгновенно: «📷 принял, секунду…»
 3. Celery: фото → MinIO → llm.vision (MiMo → fallback Gemini) → JSON
 4. Бот шлёт карточку:
@@ -116,10 +116,10 @@
        └─────────────────┘             └─────────────────────────┘
                 ▲                                ▲
                 └─────────── Caddy (TLS) ────────┘
-                       stager.kudnever.dev
+                       <app-domain>
 ```
 
-**Все 5 контейнеров** (bot, api, worker, web, caddy) + 3 stateful (postgres, redis, minio) живут в одном Compose-стеке на Hetzner-178.105.163.2 рядом с hermes.
+**Все 5 контейнеров** (bot, api, worker, web, caddy) + 3 stateful (postgres, redis, minio) живут в одном Compose-стеке на VPS. Конкретные IP, домены и host-mount пути не хранятся в public repo.
 
 ---
 
@@ -381,7 +381,7 @@ OpenAPI schema автогенерится FastAPI на `/api/v1/docs`.
 
 **Что приватно:**
 - `.env` (telegram bot token, MIMO_API_KEY, GOOGLE_API_KEY, JWT_SECRET, DB password, MINIO_SECRET_KEY)
-- Все production данные мамы (БД, MinIO bucket, бэкапы)
+- Все production данные пользователей (БД, MinIO bucket, бэкапы)
 - `secrets/` и `data/` в `.gitignore`
 
 **Что публично (github.com/kudnever/stager):**
@@ -390,7 +390,7 @@ OpenAPI schema автогенерится FastAPI на `/api/v1/docs`.
 - Docker Compose файлы для dev
 - README, ARCHITECTURE, миграции, тесты
 
-**Отдельный private repo:** `kudnever/stager-deploy` — production compose overrides + Caddyfile + бэкап скрипты + Tailscale конфиг. Туда же — данные клиентов мамы если будут (но в идеале они только в БД на сервере, не в git).
+**Отдельное private-хранилище для deploy:** production overrides, реальные домены/IP, backup config и секреты. Пользовательские данные остаются только в БД/объектном хранилище на сервере, не в git.
 
 **Аутентификация:**
 - Bot — telegram_id whitelist + invite-token redeem
@@ -447,7 +447,7 @@ services:
 ```
 # Telegram
 TELEGRAM_BOT_TOKEN=
-TELEGRAM_WHITELIST_IDS=123456,789012   # initial admins, comma-separated
+TELEGRAM_WHITELIST_IDS=<telegram_id>,<telegram_id>   # initial admins, comma-separated
 TELEGRAM_BOT_USERNAME=stager_bot       # для invite-ссылок
 
 # DB / Redis / MinIO
@@ -494,7 +494,7 @@ NEXT_PUBLIC_API_BASE=/api/v1
 ### Caddy
 
 ```
-stager.kudnever.dev {
+<app-domain> {
     reverse_proxy /api/* api:8000
     reverse_proxy web:3000
 }
@@ -520,7 +520,7 @@ stager.kudnever.dev {
 | # | Вопрос | Решение |
 |---|---|---|
 | 1 | Имя проекта | **Stager** (оставляем) |
-| 2 | Hosting | Тот же Hetzner. На сервере 2.9Gi RAM свободно, Stager budget ~1.5Gi |
+| 2 | Hosting | Один VPS, Stager budget ~1.5Gi RAM |
 | 3 | Whitelist | Whitelist (env initial admins) + invite-токены для всех остальных |
 | 4 | Валюты | Одна валюта на проект, immutable, RUB default |
 | 5 | Категории OCR | Fixed enum из 10 ключей, LLM выбирает один |

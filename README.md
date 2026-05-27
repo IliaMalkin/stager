@@ -9,9 +9,9 @@
 
 ## Why this exists
 
-My mom runs a home-staging business in Russia. She prepares apartments for sale — rents furniture, hires crews, organizes deliveries. She runs 2–3 projects in parallel and tracks expenses by writing them into the chat with each client. Compiling the final expense table at the end of a project takes hours.
+A family home-staging business was tracking project expenses in client chats: furniture rental, crews, delivery costs, and receipt photos spread across several parallel projects. Compiling the final expense table at the end of a project took hours.
 
-**Stager replaces that with a Telegram bot.** She snaps a photo of a receipt → an LLM extracts the amount, vendor, date and category → it lands in the active project. `/report` produces an XLSX.
+**Stager replaces that with a Telegram bot.** A user snaps a photo of a receipt → an LLM extracts the amount, vendor, date and category → it lands in the active project. `/report` produces an XLSX.
 
 The same bot is multi-tenant from day one, so I use it for my own expense tracking too.
 
@@ -28,7 +28,7 @@ Single Docker Compose stack. Caddy in front, Sentry + structlog for observabilit
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design rationale, [ROADMAP.md](ROADMAP.md) for the build plan.
 
-## LLM router — the interesting bit
+## LLM router
 
 [`packages/llm/router.py`](packages/llm/router.py) is a unified `chat()` / `vision()` interface that tries **MiMo (Xiaomi)** first and falls back to **Google Gemini** on rate-limits, auth failures, timeouts, or schema-validation errors. A Redis-backed soft circuit breaker disables MiMo for an hour after repeated 401/403 events.
 
@@ -46,7 +46,7 @@ result, meta = await router.vision(
 # meta.fallback_reason ∈ {None, "rate_limited", "timeout", "validation_error", ...}
 ```
 
-Every call is logged with `request_id`, provider, latency, tokens, and fallback reason. Trivial to wire to Grafana later.
+Every call is logged with `request_id`, provider, latency, tokens, and fallback reason.
 
 ## Tech choices
 
@@ -59,7 +59,7 @@ Every call is logged with `request_id`, provider, latency, tokens, and fallback 
 | Storage | MinIO (S3-compatible) | Self-hosted, S3-portable |
 | Frontend | Next.js 14 App Router + Tailwind | SSR-first, JWT never leaves the server |
 | LLM | MiMo (Xiaomi) → Gemini fallback | See router section |
-| Reports | openpyxl | Multi-sheet XLSX for mom |
+| Reports | openpyxl | Multi-sheet XLSX export |
 | Observability | structlog + Sentry | Request-id propagation across all 3 services |
 | Tests | pytest + testcontainers + respx | Real Postgres in CI, no sqlite shortcut |
 | Deploy | Docker Compose + Caddy on Hetzner | One server, one box, no Kubernetes |
@@ -92,4 +92,4 @@ MVP shipped. See [ROADMAP.md](ROADMAP.md) for what's next (rental return reminde
 
 ## License
 
-MIT. Built solo as a real-world project that also serves as a CV piece. Source layout, observability story, and provider-fallback router are intentionally over-explained for that reason — see [ARCHITECTURE.md](ARCHITECTURE.md) for design notes a reviewer would want to read.
+MIT. Built solo as a real project, with architecture notes in [ARCHITECTURE.md](ARCHITECTURE.md).

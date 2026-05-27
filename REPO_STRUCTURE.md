@@ -5,8 +5,8 @@ stager/
 ├── ARCHITECTURE.md              # эта спека
 ├── ROADMAP.md                   # 2-week plan
 ├── REPO_STRUCTURE.md            # этот файл
-├── README.md                    # для CV-аудитории, EN
-├── README-mom.ru.md             # для мамы, RU, скриншоты
+├── README.md                    # public overview, EN
+├── README-user.ru.md            # end-user instruction, RU
 ├── LICENSE                      # MIT
 ├── Makefile                     # up/down/logs/test/migrate/lint
 ├── docker-compose.yml           # dev stack
