@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from packages.domain.categories import CATEGORY_KEYS, label_for
@@ -66,6 +68,23 @@ def add_category_picker_keyboard(locale: str = "ru") -> InlineKeyboardMarkup:
     ))
     rows.append(chunk)
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def expenses_list_keyboard(expenses: list[Any]) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    for expense in expenses:
+        rows.append([InlineKeyboardButton(
+            text=f"Удалить #{expense.id}",
+            callback_data=f"exp:delete:{expense.id}",
+        )])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def expense_delete_confirm_keyboard(expense_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Да, удалить", callback_data=f"exp:confirm_delete:{expense_id}")],
+        [InlineKeyboardButton(text="Отмена", callback_data=f"exp:cancel_delete:{expense_id}")],
+    ])
 
 
 def project_switch_keyboard(projects: list[tuple[int, str, bool]]) -> InlineKeyboardMarkup:

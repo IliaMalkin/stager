@@ -86,7 +86,9 @@ class FakeSession:
     def __init__(self) -> None:
         self.by_model: defaultdict[type, dict[Any, Any]] = defaultdict(dict)
         self.scalars: dict[type, Any] = {}
+        self.execute_rows: list[Any] = []
         self.added: list[Any] = []
+        self.deleted: list[Any] = []
         self.flushed = False
         self.committed = False
 
@@ -107,8 +109,18 @@ class FakeSession:
                 return self.scalars[model]
         return None
 
+    async def execute(self, statement: Any) -> "FakeResult":
+        return FakeResult(self.execute_rows)
+
     def add(self, value: Any) -> None:
         self.added.append(value)
+
+    async def delete(self, value: Any) -> None:
+        self.deleted.append(value)
+        for values in self.by_model.values():
+            for key, stored in list(values.items()):
+                if stored is value:
+                    values.pop(key)
 
     async def flush(self) -> None:
         self.flushed = True
@@ -118,6 +130,22 @@ class FakeSession:
 
     async def commit(self) -> None:
         self.committed = True
+
+
+class FakeScalarResult:
+    def __init__(self, rows: list[Any]) -> None:
+        self.rows = rows
+
+    def all(self) -> list[Any]:
+        return self.rows
+
+
+class FakeResult:
+    def __init__(self, rows: list[Any]) -> None:
+        self.rows = rows
+
+    def scalars(self) -> FakeScalarResult:
+        return FakeScalarResult(self.rows)
 
 
 @pytest.fixture
