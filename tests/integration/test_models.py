@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from packages.db.models import (
     ActiveContext, Expense, Invite, Project, ProjectMember, Receipt, User,
@@ -22,7 +23,7 @@ async def session():
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         pytest.skip("DATABASE_URL not set; run via docker compose or CI")
-    engine = create_async_engine(db_url, pool_pre_ping=True)
+    engine = create_async_engine(db_url, pool_pre_ping=True, poolclass=NullPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as s:
         yield s

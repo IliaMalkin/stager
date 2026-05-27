@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from apps.bot.handlers.start import _redeem_invite
 from packages.db.models import Invite, Project, ProjectMember, User
@@ -21,7 +22,7 @@ async def db_engine():
     url = os.environ.get("DATABASE_URL")
     if not url:
         pytest.skip("DATABASE_URL not set")
-    engine = create_async_engine(url)
+    engine = create_async_engine(url, poolclass=NullPool)
     yield engine
     await engine.dispose()
 
@@ -30,6 +31,7 @@ async def db_engine():
 async def fixtures(db_engine):
     factory = async_sessionmaker(db_engine, expire_on_commit=False)
     async with factory() as s:
+        await _delete_test_rows(s)
         owner = User(telegram_id=111_222_333, full_name="Owner", role="admin")
         s.add(owner)
         await s.flush()
@@ -49,19 +51,35 @@ async def fixtures(db_engine):
         yield {"owner": owner, "project": project, "invite": invite}
         # cleanup
         async with factory() as ss:
-            await ss.execute(
-                ProjectMember.__table__.delete().where(ProjectMember.project_id == project.id)
-            )
-            inv = await ss.scalar(select(Invite).where(Invite.token == "testinvite12345"))
-            if inv:
-                await ss.delete(inv)
-            proj = await ss.get(Project, project.id)
-            if proj:
-                await ss.delete(proj)
-            o = await ss.get(User, owner.id)
-            if o:
-                await ss.delete(o)
+            await _delete_test_rows(ss)
             await ss.commit()
+
+
+async def _delete_test_rows(session) -> None:
+    await session.execute(
+        ProjectMember.__table__.delete().where(
+            ProjectMember.user_id.in_(
+                select(User.id).where(
+                    User.telegram_id.in_(
+                        [111_222_333, 444_555_666, 777_888_999, 999_000_111]
+                    )
+                )
+            )
+        )
+    )
+    await session.execute(
+        Invite.__table__.delete().where(
+            Invite.token.in_(["testinvite12345", "expiredinvite"])
+        )
+    )
+    await session.execute(Project.__table__.delete().where(Project.name == "Invite test"))
+    await session.execute(
+        User.__table__.delete().where(
+            User.telegram_id.in_(
+                [111_222_333, 444_555_666, 777_888_999, 999_000_111]
+            )
+        )
+    )
 
 
 def _mk_message(tg_id: int, username: str = "bob") -> MagicMock:
