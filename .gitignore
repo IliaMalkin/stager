@@ -31,3 +31,6 @@ backups/
 .vscode/
 *.swp
 .claude/
+.codex_remote_jobhunt/
+.codex_tmp_*
+outreach_test_polza/
