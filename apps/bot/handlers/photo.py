@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import date as dt_date, datetime
 from typing import Any
 
+import structlog
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
@@ -26,6 +27,7 @@ from packages.domain.categories import label_for, parse_category
 from packages.domain.currency import format_amount, parse_amount_to_minor
 
 router = Router(name="photo")
+log = structlog.get_logger(__name__)
 
 
 # ─── входное фото ─────────────────────────────────────────────────────────────
@@ -56,13 +58,17 @@ async def on_photo(
     await message.answer(t("photo.ack", locale))
 
     photo = message.photo[-1]
-    producer.enqueue_ocr(
-        file_id=photo.file_id,
-        chat_id=message.chat.id,
-        project_id=project_id,
-        user_tg_id=tg.id,
-        locale=locale,
-    )
+    try:
+        producer.enqueue_ocr(
+            file_id=photo.file_id,
+            chat_id=message.chat.id,
+            project_id=project_id,
+            user_tg_id=tg.id,
+            locale=locale,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.exception("photo.enqueue_ocr_failed", chat_id=message.chat.id, error=str(exc))
+        await message.answer(t("photo.ocr_failed", locale))
 
 
 # ─── inline-кнопки карточки ──────────────────────────────────────────────────

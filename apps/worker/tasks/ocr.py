@@ -65,8 +65,16 @@ def process_receipt(
     try:
         return asyncio.run(_run_task(file_id, chat_id, project_id, locale))
     except _RETRYABLE as exc:
+        if self.request.retries >= self.max_retries:
+            log.exception("ocr.task_failed_after_retries", file_id=file_id, chat_id=chat_id)
+            _notify_failed_sync(chat_id, locale)
+            return {"status": "failed", "error": str(exc)}
         log.warning("ocr.task_retry", file_id=file_id, error=str(exc), attempt=self.request.retries)
         raise self.retry(exc=exc) from exc
+    except Exception:
+        log.exception("ocr.task_failed", file_id=file_id, chat_id=chat_id)
+        _notify_failed_sync(chat_id, locale)
+        raise
 
 
 async def _run_task(file_id: str, chat_id: int, project_id: int, locale: str) -> dict:
@@ -76,6 +84,24 @@ async def _run_task(file_id: str, chat_id: int, project_id: int, locale: str) ->
     )
     try:
         return await _run(file_id, chat_id, project_id, locale, bot)
+    finally:
+        await bot.session.close()
+
+
+def _notify_failed_sync(chat_id: int, locale: str) -> None:
+    try:
+        asyncio.run(_notify_failed(chat_id, locale))
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ocr.failed_notification_error", chat_id=chat_id, error=str(exc))
+
+
+async def _notify_failed(chat_id: int, locale: str) -> None:
+    bot = Bot(
+        token=os.environ["TELEGRAM_BOT_TOKEN"],
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    try:
+        await _send_failed(bot, chat_id, locale)
     finally:
         await bot.session.close()
 

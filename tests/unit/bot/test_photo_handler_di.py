@@ -87,3 +87,36 @@ async def test_on_photo_only_enqueues_ocr(monkeypatch, fake_session_factory, fak
     assert session.added == []
     bot.get_file.assert_not_called()
     bot.download_file.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_on_photo_reports_failure_when_enqueue_fails(monkeypatch, fake_session_factory):
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/15")
+    from apps.bot.handlers.photo import on_photo
+
+    class FailingProducer:
+        def enqueue_ocr(self, *_args, **_kwargs):
+            raise ConnectionError("redis unavailable")
+
+    session_factory, session = fake_session_factory
+    user = User(id=10, telegram_id=123, full_name="Tester", role="user")
+    session.scalars[User] = user
+    session.by_model[ActiveContext][10] = ActiveContext(user_id=10, current_project_id=20)
+
+    message = MagicMock(spec=types.Message)
+    message.from_user = MagicMock(id=123)
+    message.chat = MagicMock(id=456)
+    message.photo = [MagicMock(file_id="large-file-id")]
+    message.answer = AsyncMock()
+
+    await on_photo(
+        message,
+        bot=MagicMock(),
+        state=MagicMock(),
+        session_factory=session_factory,
+        producer=FailingProducer(),
+        locale="ru",
+    )
+
+    assert message.answer.await_count == 2
+    assert "Не смог прочитать чек" in message.answer.await_args_list[1].args[0]
