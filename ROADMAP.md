@@ -10,7 +10,7 @@
 
 ### Day 1 (Пн) — scaffolding
 
-- [ ] `git init`, push в `github.com/kudnever/stager` (public, MIT)
+- [ ] `git init`, push в `github.com/IliaMalkin/stager` (public, MIT)
 - [ ] Структура репо (см. §16 ARCHITECTURE.md)
 - [ ] `pyproject.toml` + `requirements.txt` (или uv lock)
 - [ ] `docker-compose.yml` с postgres/redis/minio (только инфра)

@@ -12,7 +12,7 @@ docker --version
 
 # 2. Clone the repository.
 mkdir -p /opt/stager && cd /opt/stager
-git clone https://github.com/kudnever/stager.git .
+git clone https://github.com/IliaMalkin/stager.git .
 
 # 3. Copy the production env file. Do not commit it.
 scp .env.production root@<server-ip>:/opt/stager/.env

@@ -2,7 +2,7 @@
 
 > Multi-tenant project expense tracker for home-staging businesses. Snap a receipt in Telegram, get a finished spreadsheet at the end of the project.
 
-[![CI](https://github.com/kudnever/stager/actions/workflows/ci.yml/badge.svg)](https://github.com/kudnever/stager/actions/workflows/ci.yml)
+[![CI](https://github.com/IliaMalkin/stager/actions/workflows/ci.yml/badge.svg)](https://github.com/IliaMalkin/stager/actions/workflows/ci.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Next.js 14](https://img.shields.io/badge/next.js-14-black.svg)
 ![License MIT](https://img.shields.io/badge/license-MIT-green.svg)
@@ -67,7 +67,7 @@ Every call is logged with `request_id`, provider, latency, tokens, and fallback 
 ## Quickstart (development)
 
 ```bash
-git clone https://github.com/kudnever/stager.git
+git clone https://github.com/IliaMalkin/stager.git
 cd stager
 cp .env.example .env
 # Fill in TELEGRAM_BOT_TOKEN, MIMO_API_KEY, GOOGLE_API_KEY, JWT_SECRET

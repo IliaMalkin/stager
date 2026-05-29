@@ -384,7 +384,7 @@ OpenAPI schema автогенерится FastAPI на `/api/v1/docs`.
 - Все production данные пользователей (БД, MinIO bucket, бэкапы)
 - `secrets/` и `data/` в `.gitignore`
 
-**Что публично (github.com/kudnever/stager):**
+**Что публично (github.com/IliaMalkin/stager):**
 - Весь код (MIT)
 - `.env.example` с placeholder-значениями
 - Docker Compose файлы для dev

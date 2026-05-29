@@ -59,5 +59,5 @@ git init
 git add .
 git status   # глазами просмотри ещё раз!
 git commit -m "feat: initial public release — MVP scaffolding (Days 1-10)"
-gh repo create kudnever/stager --public --source=. --remote=origin --push --description "Multi-tenant project expense tracker — Telegram bot + Next.js admin"
+gh repo create IliaMalkin/stager --public --source=. --remote=origin --push --description "Multi-tenant project expense tracker — Telegram bot + Next.js admin"
 ```
