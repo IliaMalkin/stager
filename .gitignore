@@ -34,3 +34,5 @@ backups/
 .codex_remote_jobhunt/
 .codex_tmp_*
 outreach_test_polza/
+jobhunt/
+sp_check.txt
