@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://stager:stager@postgres:5432/stager")
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 _engines: weakref.WeakKeyDictionary[AbstractEventLoop, AsyncEngine] = weakref.WeakKeyDictionary()
 _sessionmakers: weakref.WeakKeyDictionary[

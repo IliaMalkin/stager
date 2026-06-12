@@ -13,4 +13,7 @@ COPY apps ./apps
 
 RUN pip install --upgrade pip && pip install -e .
 
+RUN useradd -r -s /usr/sbin/nologin app
+USER app
+
 CMD ["celery", "-A", "apps.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]

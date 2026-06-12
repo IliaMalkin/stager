@@ -15,5 +15,8 @@ COPY alembic.ini ./
 
 RUN pip install --upgrade pip && pip install -e .
 
+RUN useradd -r -s /usr/sbin/nologin app
+USER app
+
 EXPOSE 8000
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
